@@ -5,8 +5,8 @@ from tkinter import simpledialog
 from tkinter import messagebox
 import threading
 import traceback
-from QASystemManager import QASystemManager
-from qa_utils import detect_language_from_query
+from rag_qa.QASystemManager import QASystemManager
+from rag_qa.qa_utils import detect_language_from_query
 
 manager = QASystemManager()
 

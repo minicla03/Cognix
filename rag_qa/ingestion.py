@@ -1,9 +1,9 @@
-'''
+"""
 Questo modulo gestisce l'ingestione dei dati da documenti PDF che
 verranno utilizzati per creare una base di conoscenza per l'applicazione.
 Include funzioni per estrarre testo dai file PDF, processare il testo,
 creare embedding e memorizzare i dati in un vector store.
-'''
+"""
 
 import shutil
 import os
@@ -43,7 +43,7 @@ def setup_qa_system(pdf_path="data", persist_dir="chroma_db", force_rebuild=Fals
         # e infine sui caratteri individuali come ultima risorsa.
         splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=200)
         chunks = splitter.split_documents(documents)
-        print(chunks[5:7])
+        #print(chunks[5:7])
         
         # creazione degli embedding
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
