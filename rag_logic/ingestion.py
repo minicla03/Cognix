@@ -13,7 +13,16 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_ollama import ChatOllama
 from langchain.chains import RetrievalQA
+from langchain.memory import ConversationSummaryMemory
 from qa_utils import clean_text
+
+from langchain_core.runnables import (
+    RunnableLambda,
+    ConfigurableFieldSpec,
+    RunnablePassthrough,
+)
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from memory import ChatHistory
 
 def setup_qa_system(pdf_path="data", persist_dir="chroma_db", force_rebuild=False):
     # Controlla se ricostruire il vector store
@@ -60,8 +69,9 @@ def setup_qa_system(pdf_path="data", persist_dir="chroma_db", force_rebuild=Fals
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
         vectorstore = Chroma(persist_directory=persist_dir, embedding_function=embeddings)
         print("[DEBUG] Loaded existing vector store")
-    
+
     llm = ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+    summary_memory = ConversationSummaryMemory(llm=llm)
     retriever = vectorstore.as_retriever(search_type="similarity", k=3)
     
     # factory method che crea automaticamente una catena preconfigurata, semplificando  

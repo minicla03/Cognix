@@ -2,7 +2,9 @@ import os
 import shutil
 #from retrival import ask_question
 from ingestion import setup_qa_system, add_document_to_vectorstore, delete_document_from_vectorstore
+from langchain.memory import ConversationSummaryMemory
 from qa_utils import  detect_language_from_query
+from rag_logic.memory.ChatSession import ChatSession
 from rag_logic.routing.routing_action import router
 
 class QASystemManager:
@@ -14,6 +16,7 @@ class QASystemManager:
     def __init__(self, pdf_path="data", persist_dir="chroma_db"):
         self.pdf_path = pdf_path
         self.persist_dir = persist_dir
+        self.chat_session = ChatSession()
         self.ready = False
         self.qa_chain = None
         self._initialize()
