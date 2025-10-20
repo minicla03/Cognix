@@ -1,10 +1,10 @@
-'''
+"""
 Funzioni di utilità per la gestione delle domande e risposte.
 Queste funzioni includono:
 - detect_language_from_query: per rilevare la lingua della domanda basata su parole chiave.
 - clean_text: per pulire il testo rimuovendo spazi e caratteri non necessari.
 - LANGUAGE_ALIASES: un dizionario per mappare le lingue a nomi alternativi.
-'''
+"""
 
 import re
 

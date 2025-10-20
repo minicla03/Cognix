@@ -1,9 +1,11 @@
 from langchain_ollama import ChatOllama
 
-from flashcard_generation import *
-from quiz_generation import quiz_gen
+from rag_logic.tools.ITool import Context
+from rag_logic.tools.Flashcard_pipeline import FlashcardPipeline
+from rag_logic.tools.QA_pipeline import QAPipeline
+from rag_logic.tools.Quiz_pipeline import QuizPipeline
 
-def routing_action(user_query, language_hint="italian"):
+def router(qa_chain, user_query, language_hint="italian"):
     """
     Funzione per il routing dell'operazione che LLM deve svolgere.
     Si basa su un routing agent-base
@@ -11,9 +13,10 @@ def routing_action(user_query, language_hint="italian"):
     Args:
         user_query: string, prompt utente
         language_hint: string, lingua del prompt
+        qa_chain: QAChain,
 
     Returns:
-        TODO: da definire
+        answer: string risposta da parte del LLM
     """
 
     prompt =(
@@ -26,7 +29,7 @@ def routing_action(user_query, language_hint="italian"):
         "3. QUIZ_TOOL → Generates quiz from the content."
         
         "Guidelines:"
-        f"- Use the language of the user request ({language_hint})."
+        "- Use the language of the user request ({language_hint})."
         "- If the user asks for explanations, answers, summaries → QA_TOOL."
         "- If the user asks to generate flashcards → FLASHCARD_TOOL."
         "- If the user asks to generate quiz, questions for study → QUIZ_TOOL."
@@ -42,15 +45,18 @@ def routing_action(user_query, language_hint="italian"):
         "-User (Italian): Crea delle flashcard sul protocollo MQTT per ripassare. → FLASHCARD_TOOL"
         "-User (English): Make study flashcards for the chapter on Edge computing. → FLASHCARD_TOOL"
         "-User (Spanish): ¿Cuál es la diferencia entre Edge y Fog computing? → QA_TOOL"
-  
-        f"User query: {user_query}")
+
+        "User query: {user_query}")
 
     llm = ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
     response = llm.chat(messages=[{"role": "user", "content": prompt}])
 
-    if response == "QA_TOOL":
-        answer = qa_pipeline(user_query)
-    elif response == "FLASHCARD_TOOL":
-        answer = flashcard_pipeline(user_query)
-    elif response == "QUIZ_TOOL":
-        answer = quiz_generatation(user_query)
+    context = None
+    if response == "QA_TOOL": context = Context(QAPipeline())
+    elif response == "FLASHCARD_TOOL": context = Context(FlashcardPipeline())
+    elif response == "QUIZ_TOOL": context = Context(QuizPipeline())
+
+    try:
+        return context.execute(qa_chain, user_query, language_hint)
+    except BaseException as be:
+        raise be.with_traceback()
