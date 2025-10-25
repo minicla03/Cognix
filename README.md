@@ -60,14 +60,14 @@ python ui.py
 
 ## 🔍 Componenti principali della cartella app/
 
-| File/Modulo            | Funzione                                                          |
-|------------------------|-------------------------------------------------------------------|
-| `ui.py`                | Interfaccia GUI (domanda, upload, mostra documenti)              |
-| `QASystemManager.py`   | Gestione vectorstore e logica di sistema                         |
-| `ingestion.py`         | Parsing PDF, chunking e persistenza con Chroma                   |
-| `retrival.py`          | Recupero documenti e costruzione risposte                        |
-| `evaluation_script.py` | Testing automatico delle risposte               |
-| `qa_utils.py`          | Utility di pulizia, rilevamento lingua, ecc.                     |
+| File/Modulo            | Funzione                                            |
+|------------------------|-----------------------------------------------------|
+| `ui.py`                | Interfaccia GUI (domanda, upload, mostra documenti) |
+| `QASystemManager.py`   | Gestione vectorstore e logica di sistema            |
+| `ingestion.py`         | Parsing PDF, chunking e persistenza con Chroma      |
+| `retrival.py`          | Recupero documenti e costruzione risposte           |
+| `evaluation_script.py` | Testing automatico delle risposte                   |
+| `qa_utils.py`          | Utility di pulizia, rilevamento lingua, ecc.        |
 
 ---
 

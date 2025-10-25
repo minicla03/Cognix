@@ -1,5 +1,7 @@
 from rag_logic.tools.QA_pipeline import QAPipeline
 from model.Quiz import Quiz
+import json
+
 
 class QuizPipeline(QAPipeline):
     def __init__(self):
@@ -7,7 +9,7 @@ class QuizPipeline(QAPipeline):
 
     def execute(self, qa_chain, query: str, language_hint: str = "italian", n_questions=5, difficulty="medium"):
 
-        _, filtered_docs = super(self).execute(qa_chain, query, language_hint)
+        _, filtered_docs = super(self).execute(qa_chain, query, language_hint) #TODO
 
         prompt = f"""
         You are an AI assistant that generates multiple-choice quiz questions from a given text.
@@ -33,7 +35,12 @@ class QuizPipeline(QAPipeline):
             "question": prompt
         })
 
+        try:
+            quiz_data = json.loads(quiz_text)
+        except Exception:
+            raise ValueError("Output non in formato JSON valido")
+
         quiz = [Quiz(question=qt["question"],answer_list=qt["answer_list"], correct_answer=qt["correct_answer"], difficulty=qt["difficulty"])
-                for qt in quiz_text]
+                for qt in quiz_data]
 
         return quiz

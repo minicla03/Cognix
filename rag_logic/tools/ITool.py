@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from langchain.tools import BaseTool
 
 class Context:
 
@@ -17,9 +18,9 @@ class Context:
     def execute(self, *args, **kwargs) -> None:
         return self._strategy.execute(*args, **kwargs)
 
-class IToolStrategy(ABC):
+class IToolStrategy(ABC, BaseTool):
 
     @abstractmethod
-    def execute(self, qa_chain, query: str, language: str = "italian"):
+    def execute(self, qa_chain, query: dict, language: str = "italian"):
         pass
 

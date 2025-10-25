@@ -5,7 +5,7 @@ class QAPipeline(IToolStrategy):
     def __init__(self):
         super(self).__init__()
 
-    def execute(self, qa_chain, query, language_hint="italian", max_sources=3, similarity_threshold=0.75):
+    def execute(self, qa_chain, query: dict, language_hint="italian", max_sources=3, similarity_threshold=0.75):
         """
         Risponde a una domanda utilizzando un sistema di QA basato su un chain di recupero e generazione.
         Args:
@@ -29,6 +29,9 @@ class QAPipeline(IToolStrategy):
         if not filtered_docs:
             return "Informazione non presente nel contesto.", []
 
+        query_user = query["user_query"]
+        summary = query["summary"]
+
         # Prepara il prompt per la generazione della risposta
         prompt = (
             f"Rispondi in {language_hint} in modo chiaro e semplice, "
@@ -36,9 +39,12 @@ class QAPipeline(IToolStrategy):
             "La risposta deve includere i dettagli fondamentali, come definizioni, caratteristiche essenziali, "
             "ma senza usare un linguaggio troppo tecnico o complicato. "
             "Sii sintetico ma completo, come se stessi spiegando a uno studente o collega che vuole capire bene l'argomento.\n\n"
-            f"Domanda: {query}"
+            f"Domanda: {query_user}"
             "Basati esclusivamente sulle informazioni fornite nel contesto per costruire una risposta accurata e completa."
         )
+
+        if summary:
+            prompt += f"\nConsidera anche la storia della chat: {summary}"
 
         # Combina i documenti recuperati e il prompt per generare la risposta
         result = qa_chain.combine_documents_chain.invoke(input={

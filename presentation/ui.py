@@ -5,7 +5,7 @@ from tkinter import simpledialog
 from tkinter import messagebox
 import threading
 import traceback
-from rag_logic.QASystemManager import QASystemManager
+from rag_logic.memory.ChatManager import QASystemManager
 from rag_logic.qa_utils import detect_language_from_query
 
 manager = QASystemManager()

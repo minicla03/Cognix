@@ -1,5 +1,6 @@
 from rag_logic.tools.QA_pipeline import QAPipeline
 from model.Flashcard import Flashcard
+import json
 
 class FlashcardPipeline(QAPipeline):
     def __init__(self):
@@ -19,7 +20,7 @@ class FlashcardPipeline(QAPipeline):
             flashcard: flashcard
         """
 
-        _, filtered_docs = super(self).execute(qa_chain, query, language_hint)
+        _, filtered_docs = super(self).execute(qa_chain, query, language_hint) #TODO
 
         prompt = f"""
             You are an AI assistant that generates study flashcards from a given text. 
@@ -49,7 +50,12 @@ class FlashcardPipeline(QAPipeline):
             "question": prompt
         })
 
-        flashcard = [Flashcard(answer=ft["answer"], question=ft["question"]) for ft in flashcards_text]
+        try:
+            flashcards_data = json.loads(flashcards_text)
+        except Exception:
+            raise ValueError("Output non in formato JSON valido")
+
+        flashcard = [Flashcard(answer=ft["answer"], question=ft["question"]) for ft in flashcards_data]
 
         return flashcard
 

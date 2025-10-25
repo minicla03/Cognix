@@ -1,22 +1,17 @@
-# rag_logic/memory/chat_history.py
-
 from typing import List
-from threading import Lock
 from pydantic import BaseModel, Field
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 
 
 class ChatHistory(BaseChatMessageHistory, BaseModel):
-
+    # todo: update to db
     session_id: str
     messages: List[BaseMessage] = Field(default_factory=list)
-    _lock: Lock = Field(default_factory=Lock, exclude=True)
 
     class Config:
         arbitrary_types_allowed = True
 
-    # === API standard LangChain ===
     def add_user_message(self, message: str) -> None:
         """Aggiunge un messaggio dell'utente"""
         with self._lock:
@@ -37,7 +32,7 @@ class ChatHistory(BaseChatMessageHistory, BaseModel):
         with self._lock:
             return list(self.messages)
 
-    def clear(self) -> None:
+    def clear_history(self) -> None:
         """Svuota la cronologia"""
         with self._lock:
             self.messages = []
