@@ -57,5 +57,10 @@ class FlashcardPipeline(QAPipeline):
 
         flashcard = [Flashcard(answer=ft["answer"], question=ft["question"]) for ft in flashcards_data]
 
-        return flashcard
+        return {
+            "type": "QUIZ",
+            "result": flashcard,
+            "docs_source": filtered_docs,
+            "metadata": {"language": language_hint, "n_flashcards": n_flashcard, "difficulty": difficulty}
+        }
 

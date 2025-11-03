@@ -3,10 +3,10 @@ import logging
 import uuid
 from typing import Optional, Dict, List
 
-from redis_db.RedisDBM import BaseRepository
+from redis_db.RedisDBMS import BaseRepository, IChatRepository
 
 
-class ChatRepository(BaseRepository):
+class ChatRepository(IChatRepository):
     PREFIX = "chat_id:"
     USER_CHATS = "user_chats:"
     CHAT_MESSAGES = "chat_messages:"
@@ -62,12 +62,32 @@ class ChatRepository(BaseRepository):
         })
         logging.info(f"Aggiunti {len(docs)} documenti alla chat {chat_id}")
 
+    def delete_documents(self, chat_id: str, docs: List[str]) -> None:
+        chat = self.get_chat(chat_id)
+        if not chat:
+            raise ValueError(f"La chat {chat_id} non esiste.")
+        current_docs = chat.get("document_list", [])
+        current_docs.remove(docs)
+        self.redis.hset(f"{self.PREFIX}{chat_id}", mapping={
+            "document_list": json.dumps(current_docs)
+        })
+        logging.info(f"Rimossi {len(docs)} documenti alla chat {chat_id}")
+
     def get_documents(self, chat_id: str) -> List[str]:
         """Recupera la lista dei documenti associati a una chat."""
         chat = self.get_chat(chat_id)
         if not chat:
             raise ValueError(f"La chat {chat_id} non esiste.")
         return chat.get("document_list", [])
+
+    def update_last_summary(self, chat_id: str, last_summary: str ) -> None:
+        """"""
+        chat = self.get_chat(chat_id)
+        if not chat:
+            raise ValueError(f"La chat {chat_id} non esiste.")
+
+        chat["last_summary"] = last_summary
+        self.redis.hset(f"{self.PREFIX}{chat_id}", mapping=chat)
 
     # Gestione messaggi
     def add_message(self, chat_id: str, message: str) -> None:

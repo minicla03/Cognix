@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 
-from rag_logic.ingestion.ingestion import IngestionLayer
+from rag_logic.ingestion.ingestion import IngestionFlow
 from rag_logic.qa_utils import  detect_language_from_query
 
 from rag_logic.memory.ChatHistory import ChatHistory
@@ -10,29 +10,26 @@ from rag_logic.memory.ChatHistory import ChatHistory
 from rag_logic.routing.routing_agent import router_agent
 from rag_logic.routing.summary_agent import summary_agent
 
-from rag_logic.tools.ITool import Context
-from rag_logic.tools.Flashcard_pipeline import FlashcardPipeline
-from rag_logic.tools.QA_pipeline import QAPipeline
-from rag_logic.tools.Quiz_pipeline import QuizPipeline
-from redis_db.RedisDBManager import RedisDBManager
+from rag_logic.tools.ITool import ContextFactory
+from redis_db.RedisDBMS import IChatRepository, RedisConnectionManager
 
 
 class ChatManager:
 
-    def __init__(self, document_path="data", persist_dir="chroma_db"):
+    def __init__(self, user_id, document_path="data", persist_dir="chroma_db"):
         self.chat_id = None
         self.document_path = document_path
         self.persist_dir = persist_dir
         self.ready = False
-        self.qa_chain = None
         self.force_rebuild : bool = False
         self.last_summary = None
         self.history : ChatHistory = None
-        self.ingestion_layer = IngestionLayer()
+        self.ingestion_layer = IngestionFlow()
+        self.chat_repository : IChatRepository() = None
 
-        self.__initialize__(force_rebuild=self.force_rebuild)
+        self.__initialize__(user_id)
 
-    def __initialize__(self, force_rebuild):
+    def __initialize__(self, user_id):
         """
         Inizializza il sistema QA, creando o caricando il vector store.
         Args:
@@ -43,9 +40,9 @@ class ChatManager:
             Exception: Se si verifica un errore durante l'inizializzazione.
         """
         try:
-            chat_id=RedisDBManager.instance().create_chat()
+            self.chat_repository = IChatRepository(RedisConnectionManager.client)
+            chat_id=  self.chat_repository.create_chat(user_id, self.document_path, self.persist_dir)
             self.chat_id = chat_id
-            self.qa_chain = self.ingestion_layer.qa_chain
             self.ready = True
             self.history = ChatHistory(session_id=chat_id)
         except Exception as e:
@@ -57,12 +54,11 @@ class ChatManager:
     def __restart__(self, user_id, id_chat):
         """..."""
         try:
-            path_doc, path_vectorstore, last_summary = RedisDBManager.instance().retrieve_chat(user_id, id_chat)
+            path_doc, path_vectorstore, last_summary =  self.chat_repository.retrieve_chat(user_id, id_chat)
             self.last_summary = last_summary
             self.document_path = path_doc
             self.persist_dir = path_vectorstore
             self.force_rebuild = False
-            self.qa_chain = self.ingestion_layer.qa_chain #todo: da controllare
             self.ready = True
         except Exception as e:
             logging.exception("QA restart error\n", e.with_traceback())
@@ -75,19 +71,19 @@ class ChatManager:
         self.history.add_user_message(user_query)
         language = detect_language_from_query(user_query) or default_language
 
+        self.history.add_user_message(user_query)
+
         if not self.qa_chain:
             return "Sistema QA non pronto", []
 
         tool = router_agent(user_query, language)
-
-        context = None #todo: prevedi classe con etichette
-        if tool == "QA_TOOL": context = Context(QAPipeline())
-        elif tool == "FLASHCARD_TOOL": context = Context(FlashcardPipeline())
-        elif tool == "QUIZ_TOOL": context = Context(QuizPipeline())
+        logging.info("[INFO]",tool)
+        context = ContextFactory.create(tool)
 
         summary = None
-        if self.history:
+        if self.history and tool=="QA_pipeline":
             summary = summary_agent(self.history.get_messages(),language_hint="italian")
+            self.chat_repository.update_last_summary(summary)
 
         query={
             "user_query": user_query,
@@ -95,8 +91,9 @@ class ChatManager:
         }
 
         try:
-            #todo: save the ai mex
-            return context.execute(self.qa_chain, query, language)
+           response = context.execute(self.ingestion_layer.qa_chain, query, language)
+           self.history.add_ai_message(response["ai_response"]) if response["type"] == "QA_TOOL" else None
+           return response
         except BaseException as be:
             raise be.with_traceback()
 
@@ -113,7 +110,7 @@ class ChatManager:
 
         try:
             self.ingestion_layer.add_document_to_vectorstore(file_path)
-            #todo: sync db
+            self.chat_repository.add_documents(self.chat_id, file_path)
             print(f"[DEBUG] Documento aggiunto al vectorstore con successo")
         except Exception as e:
             print(f"[ERROR] Errore durante l'aggiunta al vectorstore: {e}")
@@ -136,7 +133,7 @@ class ChatManager:
         try:
             self.ingestion_layer.delete_document_from_vectorstore(file_name)
             os.remove(file_path)
-            # todo: sync db
+            self.chat_repository.delete_documents(self.chat_id, file_path)
             print("[DEBUG] Documento '{file_name}' eliminato fisicamente.")
             return True
         except Exception as e:
@@ -148,11 +145,7 @@ class ChatManager:
         Restituisce una lista dei documenti attualmente presenti nella directory `document_path`.
         """
         try:
-            # todo: from db ??
-            return sorted([
-                f for f in os.listdir(self.document_path)
-                if f.lower().endswith(".pdf") and os.path.isfile(os.path.join(self.document_path, f))
-            ])
+            return  self.chat_repository.get_documents(self.chat_id)
         except Exception as e:
             print(f"[ERROR] Impossibile elencare i documenti: {e}")
             return []
@@ -166,12 +159,10 @@ class ChatManager:
     def __close__(self):
         """Chiude il sistema e libera le risorse."""
         if self.history:
-            RedisDBManager.instance().save_chat(
+            self.chat_repository.update_chat(
                 self.chat_id,
-                self.history.get_messages(),
-                self.last_summary
+                self.history.get_messages()
             )
-            if RedisDBManager.instance().delete_message_history(self.chat_id):
-                self.history = None
+        self.history = None
         self.qa_chain = None
         self.ready = False

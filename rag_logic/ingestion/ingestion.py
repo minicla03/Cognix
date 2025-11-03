@@ -16,16 +16,19 @@ from rag_logic.ingestion.DocumentLoaderStrategy import WebLoaderStrategy, PDFLoa
     TextLoaderStrategy
 
 
-class IngestionLayer(object):
+class IngestionFlow(object):
 
     def __init__(self):
         persist_dir = "chroma_db"
 
         self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+
+
         self.vectorstore = Chroma(
                     collection_name="chat_doc",
                     embedding_function=self.embeddings,
                     persist_directory=persist_dir)
+
         self.retriever_vs = self.vectorstore.as_retriever(search_type="similarity", k=3)
         self.splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=200)
         self.llm = ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
@@ -38,9 +41,6 @@ class IngestionLayer(object):
             ".html": WebLoaderStrategy(),
             ".url": WebLoaderStrategy(),
         }
-
-    def recreate(self):
-        return  #Todo: ??
 
     def add_document_to_vectorstore(self, file_path: str):
         """
@@ -57,6 +57,7 @@ class IngestionLayer(object):
 
         chunks = self.splitter.split_documents(documents)
         self.vectorstore.add_documents(chunks)
+
         print(f"[DEBUG] Added to vector store {len(chunks)} chunks")
 
     def delete_document_from_vectorstore(self, file_name):
@@ -70,7 +71,7 @@ class IngestionLayer(object):
 
         file_name = os.path.splitext(file_name)[0]
 
-        # Prima verifica quanti documenti ci sono con questo source
+        # verifica quanti documenti ci sono con questo source
         results = self.vectorstore.get(where={"source": file_name})
 
         try:

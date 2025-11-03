@@ -15,12 +15,21 @@ class Context:
     def strategy(self, strategy: IToolStrategy) -> None:
         self._strategy = strategy
 
-    def execute(self, *args, **kwargs) -> None:
+    def execute(self, *args, **kwargs) -> dict:
         return self._strategy.execute(*args, **kwargs)
+
+class ContextFactory:
+    @staticmethod
+    def create(tool_name: str) -> Context | None:
+        try:
+            PipelineClass = globals()[tool_name.replace("_TOOL", "Pipeline")]
+            return Context(PipelineClass())
+        except KeyError:
+            return None
 
 class IToolStrategy(ABC, BaseTool):
 
     @abstractmethod
-    def execute(self, qa_chain, query: dict, language: str = "italian"):
+    def execute(self, qa_chain, query: dict, language: str = "italian") -> dict:
         pass
 

@@ -52,5 +52,9 @@ class QAPipeline(IToolStrategy):
             "question": prompt
         })
 
-        return result, filtered_docs
-
+        return  {
+            "type": "QA",
+            "ai_response": result ,
+            "docs_source": filtered_docs,
+            "metadata": {"language": language_hint, "max_sources": max_sources}
+        }

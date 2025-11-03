@@ -2,10 +2,10 @@ import logging
 import uuid
 from typing import Optional, Dict, List
 
-from redis_db.RedisDBM import BaseRepository
+from redis_db.RedisDBMS import BaseRepository, IUserRepository
 
 
-class UserRepository(BaseRepository):
+class UserRepository(IUserRepository):
     PREFIX = "user_id:"
     USER_CHATS = "user_chats:"
 

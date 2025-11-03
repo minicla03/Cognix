@@ -43,4 +43,9 @@ class QuizPipeline(QAPipeline):
         quiz = [Quiz(question=qt["question"],answer_list=qt["answer_list"], correct_answer=qt["correct_answer"], difficulty=qt["difficulty"])
                 for qt in quiz_data]
 
-        return quiz
+        return {
+            "type": "QUIZ",
+            "result": quiz,
+            "docs_source": filtered_docs,
+            "metadata": {"language": language_hint, "n_questions": n_questions, "difficulty": difficulty}
+        }
