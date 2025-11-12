@@ -1,18 +1,13 @@
-from abc import ABC
 from typing import List
-from pydantic import BaseModel, Field
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 
-from redis_db.ChatRepository import ChatRepository
 
-
-class ChatHistory(BaseChatMessageHistory, BaseModel, ABC):
+class ChatHistory(BaseChatMessageHistory):
 
     def __init__(self, session_id: str):
-        super().__init__()
         self.session_id = session_id
-        self.messages: List[BaseMessage] = Field(default_factory=list)
+        self.messages: List[BaseMessage] = []
 
     class Config:
         arbitrary_types_allowed = True
@@ -25,6 +20,6 @@ class ChatHistory(BaseChatMessageHistory, BaseModel, ABC):
         """Aggiunge un messaggio del modello"""
         self.messages.append(message)
 
-    def clear_history(self) -> None:
+    def clear(self) -> None:
         """Svuota la cronologia"""
         self.messages = []

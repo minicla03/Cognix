@@ -194,4 +194,9 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-/data
+/evaluation/data
+/docs
+/chroma_db
+.gitignore
+presentation/docs
+presentation/chroma_db
