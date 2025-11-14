@@ -194,9 +194,18 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Project specific
 /evaluation/data
 /docs
 /chroma_db
-.gitignore
 presentation/docs
 presentation/chroma_db
+data/
+*.backup
+
+# MongoDB and Redis data
+/data/mongodb/
+/data/redis/
+
+# Vector stores
+data/vectorstores/
