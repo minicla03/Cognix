@@ -8,6 +8,13 @@ from langchain_classic.chains import RetrievalQA
 #from langchain.chains.retrieval import create_retrieval_chain
 
 from rag_logic.ingestion.DocumentLoaderStrategy import *
+from rag_logic.llm.Ollama import Ollama
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 class IngestionFlow(object):
     """
@@ -20,13 +27,13 @@ class IngestionFlow(object):
      - Provide a retrieval-enabled QA chain integrated with an LLM
     """
 
-    def __init__(self):
+    def __init__(self, notebook_id: str):
         """
         Initializes the ingestion flow with embedding, vector store, retriever,
         and large language model (LLM) configurations.
         """
 
-        persist_dir = "chroma_db"
+        self.persist_dir = f"chroma_db/{notebook_id}"
 
         self.embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
@@ -34,17 +41,11 @@ class IngestionFlow(object):
         self.vectorstore = Chroma(
                     collection_name="chat_docs",
                     embedding_function=self.embeddings,
-                    persist_directory=persist_dir)
-
-        self.vectorstore = Chroma(
-            collection_name=f"user_{user_id}_notebook_{notebook_id}",
-            embedding_function=self.embeddings,
-            persist_directory="data/vectorstores"
-        )
+                    persist_directory=self.persist_dir)
 
         self.retriever_vs = self.vectorstore.as_retriever(search_type="similarity", k=3)
         self.splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=200)
-        self.llm = ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+        self.llm = Ollama() #ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
         self.qa_chain = RetrievalQA.from_chain_type(llm=self.llm, retriever=self.retriever_vs, return_source_documents=True)
         #self.qa_chain = create_retrieval_chain(self.retriever_vs, self.llm)
 
@@ -57,7 +58,27 @@ class IngestionFlow(object):
             ".csv": CSVLoaderStrategy(),
         }
 
-        logging.info("IngestionFlow initialized successfully.")
+        logger.info(f"IngestionFlow initialized for notebook '{notebook_id}'.")
+
+    def reload_vectorstore(self):
+        """
+
+        """
+        if not os.path.exists(self.persist_dir):
+            raise FileNotFoundError(f"Nessun database Chroma trovato in '{self.persist_dir}'.")
+
+        logger.info(f"Riapertura vectorstore da '{self.persist_dir}'...")
+
+        self.vectorstore = Chroma(
+            collection_name="chat_docs",
+            embedding_function=self.embeddings,
+            persist_directory=self.persist_dir
+        )
+
+        self.retriever_vs = self.vectorstore.as_retriever(search_type="similarity", k=3)
+        self.qa_chain.retriever = self.retriever_vs
+
+        logger.info("Vectorstore ricaricato con successo.")
 
     def add_document_to_vectorstore(self, file_path: str):
         """
@@ -79,7 +100,7 @@ class IngestionFlow(object):
         if not strategy:
             raise ValueError(f"No strategy defined for file format '{ext}'")
 
-        logging.info(f"Loading document: {file_path}")
+        logger.info(f"Loading document: {file_path}")
 
         documents = strategy.load(file_path)
 
@@ -90,12 +111,12 @@ class IngestionFlow(object):
         chunks = self.splitter.split_documents(documents)
 
         if not chunks:
-            logging.warning(f"No chunks generated from document '{file_path}'.")
+            logger.warning(f"No chunks generated from document '{file_path}'.")
             return
 
         self.vectorstore.add_documents(chunks)
 
-        logging.info(f"Added {len(chunks)} chunks from '{file_path}' to vectorstore.")
+        logger.info(f"Added {len(chunks)} chunks from '{file_path}' to vectorstore.")
 
     def delete_document_from_vectorstore(self, file_name: str):
         """
@@ -117,13 +138,13 @@ class IngestionFlow(object):
                     ids_to_delete.append(doc_id)
 
             if not ids_to_delete:
-                logging.info(f"No chunks found for '{file_name}'. Nothing to delete.")
+                logger.info(f"No chunks found for '{file_name}'. Nothing to delete.")
                 return
 
             self.vectorstore.delete(ids=ids_to_delete)
-            logging.info(f"Deleted {len(ids_to_delete)} chunks for file '{file_name}' from vectorstore.")
+            logger.info(f"Deleted {len(ids_to_delete)} chunks for file '{file_name}' from vectorstore.")
 
         except ValueError as ve:
-            logging.exception(ve)
+            logger.exception(ve)
         except Exception as e:
-            logging.exception(e)
+            logger.exception(e)

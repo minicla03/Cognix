@@ -44,8 +44,8 @@ class ContextFactory:
             return None
 
 
-class IToolStrategy(BaseTool, ABC):
+class IToolStrategy(ABC):
 
     @abstractmethod
-    def execute(self, qa_chain, query: dict, language: str = "italian") -> dict:
+    def execute(self, qa_chain, query: dict, language: str = "italian", toon_format: bool = False) -> dict:
         pass

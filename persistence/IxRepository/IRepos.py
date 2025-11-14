@@ -31,32 +31,31 @@ class IUserRepository(BaseRepository):
 class IChatRepository(BaseRepository):
 
     @abstractmethod
-    def create_chat(self, user_id: str, document_path: str,
-                    persist_dir: str, last_summary: Optional[str] = None) -> str:
+    def create_chat(self, notebook_id) -> str:
         pass
 
     @abstractmethod
-    def get_chat(self, chat_id: str) -> Optional[Dict]:
+    def add_message(self, chat_id: str, message: Dict[str, str]) -> None:
         pass
 
     @abstractmethod
-    def update_chat(self, chat_id: str, **kwargs) -> bool:
+    def get_messages(self, chat_id: str) -> List[Dict[str, str]]:
         pass
 
     @abstractmethod
-    def add_documents(self, chat_id: str, docs: List[str]) -> None:
+    def delete_messages(self, chat_id: str) -> bool:
         pass
 
     @abstractmethod
-    def delete_documents(self, chat_id: str, docs: List[str]) -> None:
+    def update_last_summary(self, chat_id: str, summary: str) -> None:
         pass
 
     @abstractmethod
-    def get_documents(self, chat_id: str) -> List[str]:
+    def get_last_summary(self, chat_id: str) -> Optional[str]:
         pass
 
     @abstractmethod
-    def update_last_summary(self, chat_id: str, last_summary: str) -> None:
+    def delete_last_summary(self, chat_id: str) -> bool:
         pass
 
 class INotebookRepository(BaseRepository):

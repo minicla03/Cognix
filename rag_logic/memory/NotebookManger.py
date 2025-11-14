@@ -1,9 +1,12 @@
 from typing import Dict, List, Optional
 
-from persistence.IxRepository.IRepos import INotebookRepository
+from persistence.IxRepository.IRepos import INotebookRepository, IChatRepository
 from persistence.model.Notebook import Notebook
 from persistence.mongo.MongoDBMS import MongoConnectionManager
 from persistence.mongo.NotebookRepository import MongoNotebookRepository
+from persistence.redis.ChatRepository import ChatRepository
+from persistence.redis.RedisDBMS import RedisConnectionManager
+from rag_logic.memory.ChatManager import ChatManager
 
 
 class NotebookManager:
@@ -12,6 +15,7 @@ class NotebookManager:
     def __init__(self):
         self.notebook_dict: Dict[str, Notebook] = {}
         self.notebook_repo: INotebookRepository = MongoNotebookRepository(MongoConnectionManager.instance().db)
+        self.chat_repository: IChatRepository = ChatRepository(RedisConnectionManager.instance().client)
 
     def create_notebook(self, notebook_name: str, id_user: str) -> Notebook:
         """Crea un nuovo notebook e lo salva in memoria e su MongoDB"""
@@ -19,10 +23,15 @@ class NotebookManager:
         notebook_name = notebook_name or f"Notebook{NotebookManager.counter}"
         notebook = Notebook(id_user=id_user, notebook_name=notebook_name)
 
+
         try:
             inserted_id = self.notebook_repo.create_notebook(notebook)
             notebook.id_notebook = inserted_id
             self.notebook_dict[notebook.id_notebook] = notebook
+
+            chat_id = self.chat_repository.create_chat(notebook.id_notebook)
+            #notebook.chat_manager = ChatManager(notebook.id_user, notebook.id_notebook, chat_id)
+            notebook.id_notebook = chat_id
         except Exception as e:
             raise RuntimeError(f"Errore creando notebook: {e}")
 
@@ -76,19 +85,3 @@ class NotebookManager:
             return notebooks
         except Exception as e:
             raise RuntimeError(f"Errore recuperando notebook per utente {id_user}: {e}")
-
-    def update_metadata(self, notebook_id: str, last_chat_id: str, summary: str):
-        """Aggiorna i metadata della chat di un notebook"""
-
-        try:
-            self.notebook_repo.update_chat_metadata(notebook_id, last_chat_id, summary)
-        except Exception as e:
-            raise RuntimeError(f"Errore aggiornando metadata del notebook {notebook_id}: {e}")
-
-    def delete_metadata(self, notebook_id: str):
-        """Elimina i metadata della chat di un notebook"""
-
-        try:
-            self.notebook_repo.delete_notebook(notebook_id)
-        except Exception as e:
-            raise RuntimeError(f"Errore eliminando metadata del notebook {notebook_id}: {e}")

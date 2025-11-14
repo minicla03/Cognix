@@ -1,5 +1,4 @@
 import streamlit as st
-import uuid
 import os, sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -9,7 +8,11 @@ from rag_logic.memory.NotebookManger import NotebookManager
 notebook_manager = NotebookManager()
 user_id = "73776694-e8b0-4014-92c9-0db7540a38d6"
 
-st.set_page_config(page_title="Cognix - Notebook", layout="wide")
+st.set_page_config(
+    page_title="Cognix - Notebook",
+    page_icon="👁️‍🗨️",
+    layout="wide"
+)
 
 st.title("📚 Cognix - I tuoi Notebook")
 st.markdown("Crea nuovi notebook o apri quelli esistenti per avviare una sessione RAG.")
@@ -27,8 +30,8 @@ if "notebooks" not in st.session_state:
         st.session_state.notebooks[notebook.id_notebook] = notebook
 
 # --- Funzione creazione notebook ---
-def create_notebook(notebook_namea):
-    nb_c= notebook_manager.create_notebook(notebook_namea, user_id)
+def create_notebook(notebook_name):
+    nb_c= notebook_manager.create_notebook(notebook_name, user_id)
     st.session_state.notebooks[nb_c.id_notebook] = nb_c
     return nb_c
 
@@ -60,7 +63,10 @@ if st.session_state.notebooks:
                     <a href='/chat?notebook_id={nb_id}' target='_self'>
                         <button style='background-color:#0078D4;color:white;padding:6px 12px;border:none;border-radius:6px;'>Apri Notebook</button>
                     </a>
-                </div>
+                                
+                    <button style='background-color:#FF0000;color:white;padding:6px 12px;border:none;border-radius:6px;'>Cancella Notebook</button>
+                     
+                </div>     
                 """,
                 unsafe_allow_html=True,
             )

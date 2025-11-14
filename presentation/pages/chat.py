@@ -15,24 +15,21 @@ st.set_page_config(
 query_params = st.query_params
 param_notebook_id = query_params.get("notebook_id", [None])[0]
 
-# Salva in session_state se esiste
-if param_notebook_id:
-    st.session_state.current_notebook_id = param_notebook_id
-    # opzionale: titolo se vuoi salvarlo
-    st.session_state.current_notebook_title = st.session_state.get("current_notebook_title", "Notebook")
-
 # Recupera sempre da session_state
-notebook_id = st.session_state.get("current_notebook_id")
-notebook_title = st.session_state.get("current_notebook_title", "Notebook")
+nb = st.session_state.get(param_notebook_id)
+if not nb:
+    st.warning("Seleziona un notebook prima di accedere al workspace.")
+    st.stop()
 
-if notebook_id:
-    st.header(f"📓 Notebook: {notebook_id}")  #todo: retrieve_name
+if nb:
+    st.write(f"Notebook aperto: {nb.notebook_name}")
 else:
     st.warning("Nessun notebook selezionato.")
 
 # --- Inizializzazione chat manager ---
 if "chat_manager" not in st.session_state:
-    st.session_state.chat_manager = ChatManager(user_id="test_user")
+    st.session_state.chat_manager = ChatManager(user_id="73776694-e8b0-4014-92c9-0db7540a38d6",
+                                                notebook_id=nb.id_notebook, chat_id=nb.chat_id)
 
 chat_manager: ChatManager = st.session_state.chat_manager
 
@@ -146,7 +143,7 @@ with col_chat:
     # --- Logica invio messaggi ---
     if send_button and user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
-        if chat_manager.is_ready():
+        if chat_manager._is_ready():
             response = chat_manager.execute_rag_pipeline(user_input)
             if "error" in response:
                 st.session_state.messages.append({"role": "assistant", "content": f"⚠️ Errore: {response['error']}"})

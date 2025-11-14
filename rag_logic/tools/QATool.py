@@ -1,12 +1,12 @@
 from rag_logic.tools.ITool import IToolStrategy
-
+from rag_logic.utils import toon_to_json, json_to_toon
 
 class QATool(IToolStrategy):
 
     def __init__(self):
         super().__init__()
 
-    def execute(self, qa_chain, query: dict, language_hint="italian", max_sources=3, similarity_threshold=0.75):
+    def execute(self, qa_chain, query: dict, language_hint="italian", toon_format: bool = False, max_sources=3, similarity_threshold=0.75):
 
         # Esegue una ricerca nel vectorstore per ottenere i documenti pertinenti ricercando per similarità
 
@@ -46,15 +46,26 @@ class QATool(IToolStrategy):
         if summary:
             prompt += f"\nConsider also the history of the chat: {summary}"
 
+        input_to_chain = {"input_documents": filtered_docs, "question": prompt}
+
+        if toon_format:
+            input_to_chain = json_to_toon(input_to_chain)
+
+        # Invoca il chain
+        response = qa_chain.combine_documents_chain.invoke(input=input_to_chain)
+
         # Combina i documenti recuperati e il prompt per generare la risposta
-        result = qa_chain.combine_documents_chain.invoke(input={
+        """result = qa_chain.combine_documents_chain.invoke(input={
             "input_documents": filtered_docs,
             "question": prompt
-        })
+        })"""
+
+        if toon_format:
+            response = toon_to_json(response)
 
         return  {
             "type": "QA",
-            "ai_response": result ,
+            "ai_response": response ,
             "docs_source": filtered_docs,
             "metadata": {"language": language_hint, "max_sources": max_sources}
         }

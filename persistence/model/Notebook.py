@@ -1,6 +1,6 @@
 import datetime
 
-from rag_logic.memory.ChatManager import ChatManager
+#from rag_logic.memory.ChatManager import ChatManager
 
 
 class Notebook:
@@ -8,11 +8,11 @@ class Notebook:
     def __init__(self, id_user, notebook_name):
         self.id_notebook = None
         self.id_user = id_user
+        self.chat_id = None
         self.notebook_name = notebook_name
         self.documents= []
         self.created_at = datetime.datetime.now()
-
-        self.chat_manager = ChatManager(id_user)
+        #self.chat_manager: ChatManager
 
     def to_dict(self):
         return {

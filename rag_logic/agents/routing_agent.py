@@ -1,12 +1,12 @@
 import re
-
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_ollama import ChatOllama
 import logging
+
+from rag_logic.llm.Ollama import Ollama
+from rag_logic.utils import json_to_toon, toon_to_json
 
 logger = logging.getLogger(__name__)
 
-def router_agent(user_query, language_hint="italian"):
+def router_agent(user_query, toon_format, language_hint="italian"):
     """
     Route the user's query to the appropriate RAG subsystem (QA, Flashcard, or Quiz).
 
@@ -71,17 +71,24 @@ def router_agent(user_query, language_hint="italian"):
     """
 
     messages = [
-        SystemMessage(content=prompt_routing),
-        HumanMessage(content=user_query)
+        {"role": "system", "content": prompt_routing},
+        {"role": "user", "content": user_query}
     ]
 
+    if toon_format:
+        messages = json_to_toon(messages)
+
+    # Invoca il chain
     try:
 
-        llm = ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+        response = Ollama().chat(messages)#(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
         logger.info("Invio messaggi al modello Ollama...")
 
-        response = llm.invoke(messages)
-        text = response.content.strip().upper()
+        if toon_format:
+            response = toon_to_json(response)
+
+        #response = llm.invoke(messages)
+        text = response.strip().upper() #.content
         logger.info("Risposta grezza del modello: %s", text)
 
         match = re.search(r"(QA_TOOL|FLASHCARD_TOOL|QUIZ_TOOL)", text)

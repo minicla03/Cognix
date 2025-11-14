@@ -1,105 +1,149 @@
 import json
 import logging
 import uuid
-from typing import Optional, Dict, List
+from typing import List, Dict
 
 from persistence.IxRepository.IRepos import IChatRepository
 
 
 class ChatRepository(IChatRepository):
+    """Repository for managing chat sessions and message history in Redis."""
+
     PREFIX = "chat_id:"
-    USER_CHATS = "user_chats:"
     CHAT_MESSAGES = "chat_messages:"
+    LAST_SUMMARY = "last_summary:"
 
-    def _generate_name(self, chat_id: str) -> str:
-        return f"chat_{chat_id[:8]}"
+    def __init__(self, db):
+        """
+        Initialize the ChatRepository with a Redis client instance.
 
-    def create_chat(self, user_id: str, document_path: str,
-                    persist_dir: str, last_summary: Optional[str] = None) -> str:
-        chat_id = str(uuid.uuid4())
-        chat_name = self._generate_name(chat_id)
+        Args:
+            db: An active Redis client connection used to persist chat data.
+        """
+        super().__init__(db)
+        self.redis = db
 
-        chat_data = {
-            "name_chat": chat_name,
-            "document_path": document_path,
-            "persist_dir": persist_dir,
-            "document_list": json.dumps([]),
-            "last_summary": last_summary or ""
-        }
+    def create_chat(self, notebook_id: str) -> str:
+        """
+        Create a new chat session associated with a notebook.
+        If a chat already exists for the notebook, returns the existing chat_id.
 
-        self.redis.hset(f"{self.PREFIX}{chat_id}", mapping=chat_data)
-        self.redis.sadd(f"{self.USER_CHATS}{user_id}", chat_id)
+        Args:
+            notebook_id (str): The notebook identifier.
 
-        logging.info(f"Creata chat {chat_name} ({chat_id}) per utente {user_id}")
-        return chat_id
+        Returns:
+            str: The chat_id for this notebook.
+        """
+        try:
+            existing_chat_id = self.redis.get(f"{self.PREFIX}{notebook_id}")
+            if existing_chat_id:
+                return existing_chat_id.decode("utf-8")  # Redis returns bytes
 
-    def get_chat(self, chat_id: str) -> Optional[Dict[str, str]]:
-        chat = self.redis.hgetall(f"{self.PREFIX}{chat_id}")
-        if chat and "document_list" in chat:
-            try:
-                chat["document_list"] = json.loads(chat["document_list"])
-            except json.JSONDecodeError:
-                chat["document_list"] = []
-        return chat or None
+            chat_id = str(uuid.uuid4())
 
-    def update_chat(self, chat_id: str, **kwargs) -> bool:
-        """Aggiorna una chat esistente."""
-        if not self.redis.exists(f"{self.PREFIX}{chat_id}"):
-            raise ValueError(f"La chat {chat_id} non esiste.")
-        self.redis.hset(f"{self.PREFIX}{chat_id}", mapping=kwargs)
-        logging.info(f"Chat {chat_id} aggiornata con {kwargs.keys()}")
-        return True
+            self.redis.set(f"{self.PREFIX}{notebook_id}", chat_id)
+            logging.info(f"Created new chat {chat_id} for notebook {notebook_id}")
 
-    def add_documents(self, chat_id: str, docs: List[str]) -> None:
-        """Aggiunge documenti alla chat."""
-        chat = self.get_chat(chat_id)
-        if not chat:
-            raise ValueError(f"La chat {chat_id} non esiste.")
-        current_docs = chat.get("document_list", [])
-        updated_docs = current_docs + docs
-        self.redis.hset(f"{self.PREFIX}{chat_id}", mapping={
-            "document_list": json.dumps(updated_docs)
-        })
-        logging.info(f"Aggiunti {len(docs)} documenti alla chat {chat_id}")
+            return chat_id
+        except Exception as e:
+            logging.error(f"Failed to create chat for notebook {notebook_id}: {e}")
+            raise
 
-    def delete_documents(self, chat_id: str, docs: List[str]) -> None:
-        chat = self.get_chat(chat_id)
-        if not chat:
-            raise ValueError(f"La chat {chat_id} non esiste.")
-        current_docs = chat.get("document_list", [])
-        current_docs.remove(docs)
-        self.redis.hset(f"{self.PREFIX}{chat_id}", mapping={
-            "document_list": json.dumps(current_docs)
-        })
-        logging.info(f"Rimossi {len(docs)} documenti alla chat {chat_id}")
+    def add_message(self, chat_id: str, message: Dict[str, str]) -> None:
+        """Store a message in the chat history."""
+        if not isinstance(message, dict) or "type" not in message or "mex" not in message:
+            raise ValueError("Invalid message format. Expected a dict with keys 'type' and 'mex'.")
 
-    def get_documents(self, chat_id: str) -> List[str]:
-        """Recupera la lista dei documenti associati a una chat."""
-        chat = self.get_chat(chat_id)
-        if not chat:
-            raise ValueError(f"La chat {chat_id} non esiste.")
-        return chat.get("document_list", [])
+        try:
+            self.redis.rpush(f"{self.CHAT_MESSAGES}{chat_id}", json.dumps(message))
+        except Exception as e:
+            logging.error(f"Failed to store message for chat {chat_id}: {e}")
+            raise
 
-    def update_last_summary(self, chat_id: str, last_summary: str ) -> None:
-        """"""
-        chat = self.get_chat(chat_id)
-        if not chat:
-            raise ValueError(f"La chat {chat_id} non esiste.")
-
-        chat["last_summary"] = last_summary
-        self.redis.hset(f"{self.PREFIX}{chat_id}", mapping=chat)
-
-    # Gestione messaggi
-    def add_message(self, chat_id: str, message: str) -> None:
-        """Salva un messaggio nella history."""
-        self.redis.rpush(f"{self.CHAT_MESSAGES}{chat_id}", message)
-
-    def get_messages(self, chat_id: str) -> List[str]:
-        """Recupera tutti i messaggi di una chat."""
-        return self.redis.lrange(f"{self.CHAT_MESSAGES}{chat_id}", 0, -1)
+    def get_messages(self, chat_id: str) -> List[Dict[str, str]]:
+        """Retrieve all messages for a given chat session."""
+        try:
+            raw_messages = self.redis.lrange(f"{self.CHAT_MESSAGES}{chat_id}", 0, -1)
+            messages = []
+            for raw in raw_messages:
+                try:
+                    messages.append(json.loads(raw))
+                except json.JSONDecodeError:
+                    logging.warning(f"Corrupted message in chat {chat_id}: {raw}")
+            return messages
+        except Exception as e:
+            logging.error(f"Failed to retrieve messages for chat {chat_id}: {e}")
+            raise
 
     def delete_messages(self, chat_id: str) -> bool:
-        """Elimina tutta la history di una chat."""
-        self.redis.delete(f"{self.CHAT_MESSAGES}{chat_id}")
-        logging.info(f"Eliminata history messaggi per chat {chat_id}")
-        return True
+        """Delete the entire message history for a chat session."""
+        try:
+            self.redis.delete(f"{self.CHAT_MESSAGES}{chat_id}")
+            logging.info(f"Deleted message history for chat {chat_id}")
+            return True
+        except Exception as e:
+            logging.error(f"Failed to delete messages for chat {chat_id}: {e}")
+            return False
+
+    def get_chat_id_by_notebook(self, notebook_id: str) -> str:
+        """
+        Retrieve the chat_id associated with a notebook.
+
+        Args:
+            notebook_id (str): The notebook identifier.
+
+        Returns:
+            str: chat_id if exists, None otherwise.
+        """
+        chat_id = self.redis.get(f"{self.PREFIX}{notebook_id}")
+        return chat_id.decode("utf-8") if chat_id else None
+
+    def update_last_summary(self, chat_id: str, summary: str) -> None:
+        """
+        Store or update the last summary for a chat.
+
+        Args:
+            chat_id (str): Unique identifier of the chat session.
+            summary (str): The summary text to store.
+        """
+        try:
+            self.redis.set(f"{self.LAST_SUMMARY}{chat_id}", summary)
+            logging.info(f"Updated last summary for chat {chat_id}")
+        except Exception as e:
+            logging.error(f"Failed to update last summary for chat {chat_id}: {e}")
+            raise
+
+    def get_last_summary(self, chat_id: str) -> str:
+        """
+        Retrieve the last summary of a chat.
+
+        Args:
+            chat_id (str): Unique identifier of the chat session.
+
+        Returns:
+            str: The last summary, or None if not set.
+        """
+        try:
+            summary = self.redis.get(f"{self.LAST_SUMMARY}{chat_id}")
+            return summary.decode("utf-8") if summary else None
+        except Exception as e:
+            logging.error(f"Failed to retrieve last summary for chat {chat_id}: {e}")
+            raise
+
+    def delete_last_summary(self, chat_id: str) -> bool:
+        """
+        Delete the last summary associated with a chat.
+
+        Args:
+            chat_id (str): Unique identifier of the chat session.
+
+        Returns:
+            bool: True if deletion was successful, False otherwise.
+        """
+        try:
+            self.redis.delete(f"{self.LAST_SUMMARY}{chat_id}")
+            logging.info(f"Deleted last summary for chat {chat_id}")
+            return True
+        except Exception as e:
+            logging.error(f"Failed to delete last summary for chat {chat_id}: {e}")
+            return False

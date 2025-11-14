@@ -4,13 +4,15 @@ from rag_logic.tools.QATool import QATool
 from persistence.model.Quiz import Quiz
 import json
 
+from rag_logic.utils import json_to_toon, toon_to_json
+
 
 class QuizTool(QATool, ABC):
 
     def __init__(self):
         super().__init__()
 
-    def execute(self, qa_chain, query: str, language_hint: str = "italian", n_questions=5, difficulty="medium"):
+    def execute(self, qa_chain, query: str, language_hint: str = "italian", toon_format: bool = False, n_questions=5, difficulty="medium"):
 
         response = super().execute(qa_chain, query, language_hint)
         filtered_docs = response["docs_source"]
@@ -34,15 +36,24 @@ class QuizTool(QATool, ABC):
         Text to process: {filtered_docs}
         """
 
-        quiz_text = qa_chain.combine_documents_chain.invoke({
+        input_to_chain = {"input_documents": filtered_docs, "question": prompt}
+
+        if toon_format:
+            input_to_chain = json_to_toon(input_to_chain)
+
+        # Invoca il chain
+        response = qa_chain.combine_documents_chain.invoke(input=input_to_chain)
+
+        """quiz_text = qa_chain.combine_documents_chain.invoke({
             "input_documents": filtered_docs,
             "question": prompt
-        })
+        })"""
 
-        quiz_text = str(quiz_text)
+        if toon_format:
+            response = toon_to_json(response)
 
         try:
-            quiz_data = json.loads(quiz_text)
+            quiz_data = json.loads(response)
         except Exception:
             raise ValueError("Output non in formato JSON valido")
 

@@ -1,8 +1,8 @@
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_ollama import ChatOllama
+from rag_logic.llm.Ollama import Ollama
+from rag_logic.utils import json_to_toon, toon_to_json
 
 
-def summary_agent(conversation_history: list, language_hint="italian"):
+def summary_agent(conversation_history: list,  toon_format, language_hint="italian"):
 
     conv_text = "\n".join(
         f"{type(msg).__name__}: {msg.content}" if hasattr(msg, "content") else str(msg)
@@ -26,12 +26,18 @@ def summary_agent(conversation_history: list, language_hint="italian"):
     """
 
     messages = [
-        SystemMessage(content=prompt_summary),
-        HumanMessage(content=conv_text)
+        {"role": "system", "content": prompt_summary},
+        {"role": "user", "content": conv_text}
     ]
 
-    llm = ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
-    response = llm.invoke(messages)
-    summary = response.content
+    if toon_format:
+        messages = json_to_toon(messages)
+
+
+    summary = Ollama().chat(messages)#ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+
+    if toon_format:
+        summary = toon_to_json(messages)
+    #response = llm.invoke(messages)
     print(summary)
     return summary

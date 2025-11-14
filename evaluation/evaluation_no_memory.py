@@ -3,14 +3,14 @@ Script per valutare un sistema di domande e risposte su un set di test predefini
 Utilizza il QASystemManager per gestire le operazioni QA e calcola le metriche di performance.
 """
 
-from rag_qa.QASystemManager import QASystemManager
+from rag_logic.ChatManager import ChatManager
 from evaluation import evaluate_all, compute_context_precision_recall
 from test_case import TEST_CASES
 
 # Inizializza il gestore del sistema QA
-manager = QASystemManager()
+manager = ChatManager()
 
-if not manager.is_ready():
+if not manager._is_ready():
     print("QA System non pronto.")
     exit()
 
@@ -18,7 +18,6 @@ print("Inizio valutazione su test set...\n")
 
 # Lista per memorizzare i risultati delle metriche
 results = []
-
 
 with open("metriche_medie.txt", "w", encoding="utf-8") as f:
     '''
