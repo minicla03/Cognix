@@ -40,34 +40,30 @@ def router_agent(user_query, toon_format, language_hint="italian"):
     logger.info("Avvio router_agent per query: %s", user_query)
 
     prompt_routing = f"""
-        "You are an intelligent task router for a Retrieval-Augmented Generation (RAG) system."
-        "Your job is to analyze the user's request and decide which function should be executed."
-    
-        "Available functions:"
-        "1. QA_TOOL → Answers a question based on the context retrieved from documents."
-        "2. FLASHCARD_TOOL → Generates study flashcards (question/answer pairs) from the content."
-        "3. QUIZ_TOOL → Generates quiz from the content."
+        You are an intelligent task router for a Retrieval-Augmented Generation (RAG) system.
+        Your job is to analyze the user's request and decide which function should be executed.
         
-        "Guidelines:"
-        "- Use the language of the user request ({language_hint})."
-        "- If the user asks for explanations, answers, summaries → QA_TOOL."
-        "- If the user asks to generate flashcards → FLASHCARD_TOOL."
-        "- If the user asks to generate quiz, questions for study → QUIZ_TOOL."
+        Available functions:
+        1. QA_TOOL → Answers a question based on the context retrieved from documents.
+        2. FLASHCARD_TOOL → Generates study flashcards (question/answer pairs) from the content.
+        3. QUIZ_TOOL → Generates quiz from the content.
         
-        "Instructions:"
-        "- If the user asks for explanations, summaries, or answers → choose QA_TOOL."
-        "- If the user explicitly asks to create, generate, or build flashcards, summaries for study, or Q/A pairs → choose FLASHCARD_TOOL."
-        "- If the user asks to create, generate or build quiz, questions for study  → QUIZ_TOOL."
-        "- Respond ONLY with the name of the function to call, nothing else."
+        Guidelines:
+        - Use the language of the user's query if detectable, otherwise fallback to {language_hint}.
+        - If the query asks for explanations, summaries, or answers → QA_TOOL.
+        - If the query asks to generate flashcards → FLASHCARD_TOOL.
+        - If the query asks to generate quiz questions → QUIZ_TOOL.
+        - If multiple intents are present, choose the one explicitly requested last.
         
-        "Few-shot examples:"
-        "-User (Italian): Spiegami come funziona il protocollo MQTT. → QA_TOOL"
-        "-User (Italian): Crea delle flashcard sul protocollo MQTT per ripassare. → FLASHCARD_TOOL"
-        "-User (English): Make study flashcards for the chapter on Edge computing. → FLASHCARD_TOOL"
-        "-User (Spanish): ¿Cuál es la diferencia entre Edge y Fog computing? → QA_TOOL"
-                
-        Response only with the name of tool to use: QA_TOOL, FLASHCARD_TOOL, QUIZ_TOOL.
-        Do not add text, explanations, or punctuation.
+        Few-shot examples:
+        - User (Italian): Spiegami MQTT → QA_TOOL
+        - User (Italian): Crea flashcards su MQTT → FLASHCARD_TOOL
+        - User (English): Make study flashcards for Edge computing → FLASHCARD_TOOL
+        - User (Spanish): ¿Cuál es la diferencia entre Edge y Fog? → QA_TOOL
+        - User (French): Explique-moi HTTPS → QA_TOOL
+        - User (German): Erstelle Lernkarten über RAM und ROM → FLASHCARD_TOOL
+        
+        Respond ONLY with one of: QA_TOOL, FLASHCARD_TOOL, QUIZ_TOOL. No extra text, punctuation, or explanation.
     """
 
     messages = [
@@ -81,7 +77,7 @@ def router_agent(user_query, toon_format, language_hint="italian"):
     # Invoca il chain
     try:
 
-        response = Ollama().chat(messages)#(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+        response = Ollama().invoke(messages)#(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
         logger.info("Invio messaggi al modello Ollama...")
 
         if toon_format:

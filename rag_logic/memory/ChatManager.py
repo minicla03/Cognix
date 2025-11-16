@@ -208,7 +208,7 @@ class ChatManager:
             print(f"[ERROR] Impossibile elencare i documenti: {e}")
             return []
 
-    def _is_ready(self):
+    def is_ready(self):
         """
         Checks if the system is ready to process queries.
 

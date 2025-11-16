@@ -53,19 +53,11 @@ class FlashcardTool(QATool, ABC):
 
         input_to_chain = {"input_documents": filtered_docs, "question": prompt}
 
-        if toon_format:
-            input_to_chain = json_to_toon(input_to_chain)
-
         # Invoca il chain
-        response = qa_chain.combine_documents_chain.invoke(input=input_to_chain)
-
-        """flashcards_text = qa_chain.combine_documents_chain.invoke({
-            "input_documents": filtered_docs,
-            "question": prompt
-        })"""
-
-        if toon_format:
-            response = toon_to_json(response)
+        response = qa_chain.combine_documents_chain.invoke(input=input_to_chain,
+            config=None,
+            toon_format=toon_format
+        )
 
         try:
             flashcards_data = json.loads(response)
@@ -81,6 +73,6 @@ class FlashcardTool(QATool, ABC):
             "metadata": {
                 "language": language_hint,
                 "n_flashcards": n_flashcard,
-                "difficulty": difficulty}
+                "difficulty": difficulty
+            }
         }
-

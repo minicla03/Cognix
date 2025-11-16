@@ -34,7 +34,7 @@ def summary_agent(conversation_history: list,  toon_format, language_hint="itali
         messages = json_to_toon(messages)
 
 
-    summary = Ollama().chat(messages)#ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+    summary = Ollama().invoke(messages)#ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
 
     if toon_format:
         summary = toon_to_json(messages)

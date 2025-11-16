@@ -1,10 +1,24 @@
+from __future__ import annotations
+
+import logging
+
+from langchain_core.prompt_values import StringPromptValue, ChatPromptValue
+
+logger = logging.getLogger(__name__)
+
 import threading
+from typing import Any
+
+from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.runnables.utils import Input, Output
 from ollama import Client
 from dotenv import load_dotenv
 import os
 
+from rag_logic.utils import toon_to_json, json_to_toon
 
-class Ollama:
+
+class Ollama(Runnable):
     """
     Thread-safe singleton for managing a single instance of ChatOllama.
 
@@ -56,22 +70,48 @@ class Ollama:
             headers={"Authorization": f"Bearer {api_key}"}
         )
 
-    def chat(self, messages):
+    def invoke(self, input: Input, config: RunnableConfig | None = None, **kwargs: Any) -> Output:
         """
-        Executes a chat completion using the underlying Ollama client.
-
-
-        Returns
-        -------
-        messages : list[str]
-            A list of chat messages, each typically containing fields such
-            as `role` and `content`.
-
-        Returns
-        -------
-        str
-            The textual content of the model's response.
+        Invoca il modello con input come dizionario (e.g., {"messages": [...]}).
+        Restituisce la risposta come stringa.
         """
+
+        if isinstance(input, str):
+            # Caso semplice
+            messages = [{"role": "user", "content": input}]
+
+        elif isinstance(input, StringPromptValue):
+            # Prompt generato automaticamente da LangChain
+            messages = [{"role": "user", "content": input.text}]
+
+        elif isinstance(input, ChatPromptValue):
+            # Prompt chat generato da LC
+            messages = [{"role": m.role, "content": m.content} for m in input.messages]
+
+        elif isinstance(input, dict):
+            # Caso legacy (LLMChain con "messages")
+            # Non tutti i dict hanno messages, quindi controllo
+            if "messages" in input:
+                messages = input["messages"]
+            elif "text" in input:  # fallback langchain vecchio
+                messages = [{"role": "user", "content": input["text"]}]
+            else:
+                raise ValueError(f"Dict input non valido: {input}")
+
+        else:
+            # Oggetto pydantic o altro serializzabile → fallback
+            text = str(input)
+            messages = [{"role": "user", "content": text}]
+
+        if not messages:
+            raise ValueError("Input deve contenere 'messages' oppure una stringa.")
+
+        logger.debug(f"toon: {kwargs.get("toon_format", None)}")
+        if kwargs.get("toon_format", None):
+            messages = json_to_toon(messages)
+
+        logger.info("\nTOON format: %s", messages)
+
         response = self.__client.chat(
             model="gpt-oss:20b-cloud",
             messages=messages,
@@ -84,6 +124,13 @@ class Ollama:
             },
             stream=False
         )
+
+        logger.info("Response: %s", response)
+        response = response.model_dump_json()
+        logger.info("Response: %s", response)
+
+        if kwargs.get("toon_format", None):
+            response = toon_to_json(response)
 
         return response['message']['content']
 

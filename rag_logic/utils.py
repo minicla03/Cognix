@@ -25,12 +25,24 @@ def clean_text(text):
     return text.split
 
 def detect_language_from_query(query):
+    """
+    Detects the language of a user query based on keywords and language names.
+
+    Returns:
+        str: language key (e.g., 'italian', 'english') or None if not detected
+    """
     query_lower = query.lower()
     for lang, aliases in LANGUAGE_ALIASES.items():
         for alias in aliases:
-            if re.search(r"\b(in|in lingua)\s+" + re.escape(alias) + r"\b", query_lower) or f"rispondi in {alias}" in query_lower:
+            patterns = [
+                rf"\b(in|in lingua)\s+{re.escape(alias)}\b",
+                rf"rispondi in {re.escape(alias)}",
+                rf"\b{re.escape(alias)}\b"
+            ]
+            if any(re.search(pat, query_lower) for pat in patterns):
                 return lang
     return None
+
 
 def json_to_toon(data: Dict[str, Any], *,
                  delimiter: str = ",",

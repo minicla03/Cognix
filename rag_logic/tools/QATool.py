@@ -1,5 +1,5 @@
 from rag_logic.tools.ITool import IToolStrategy
-from rag_logic.utils import toon_to_json, json_to_toon
+
 
 class QATool(IToolStrategy):
 
@@ -9,7 +9,6 @@ class QATool(IToolStrategy):
     def execute(self, qa_chain, query: dict, language_hint="italian", toon_format: bool = False, max_sources=3, similarity_threshold=0.75):
 
         # Esegue una ricerca nel vectorstore per ottenere i documenti pertinenti ricercando per similarità
-
         user_query = query["user_query"]
         summary = query["summary"]
 
@@ -33,35 +32,30 @@ class QATool(IToolStrategy):
             }
 
         # Prepara il prompt per la generazione della risposta
-        prompt = (
-            f"Answer in {language_hint} clearly and simply, "
-            "explaining the main concepts in a way that’s easy to understand even for non-experts. "
-            "The answer should include the essential details, such as definitions and key characteristics, "
-            "but without using overly technical or complex language. "
-            "Be concise yet complete, as if you were explaining the topic to a student or colleague who wants to fully understand it.\n\n"
-            f"Question: {user_query}"
-            "Rely exclusively on the information provided in the context to construct an accurate and complete answer."
-        )
+        prompt = f"""
+            Answer in {language_hint} clearly and simply,
+            explaining the main concepts in a way that’s easy to understand even for non-experts.
+            The answer should include the essential details, such as definitions and key characteristics,
+            but without using overly technical or complex language.
+            Be concise yet complete, as if you were explaining the topic to a student or colleague who wants to fully understand it.\n\n
+            Question: {user_query}
+            Rely exclusively on the information provided in the context to construct an accurate and complete answer.
+        """
 
         if summary:
             prompt += f"\nConsider also the history of the chat: {summary}"
 
-        input_to_chain = {"input_documents": filtered_docs, "question": prompt}
-
-        if toon_format:
-            input_to_chain = json_to_toon(input_to_chain)
-
-        # Invoca il chain
-        response = qa_chain.combine_documents_chain.invoke(input=input_to_chain)
+        input_to_chain = {
+                "input_documents": filtered_docs,
+                "question": prompt
+            }
 
         # Combina i documenti recuperati e il prompt per generare la risposta
-        """result = qa_chain.combine_documents_chain.invoke(input={
-            "input_documents": filtered_docs,
-            "question": prompt
-        })"""
-
-        if toon_format:
-            response = toon_to_json(response)
+        response = qa_chain.combine_documents_chain.invoke(
+            input=input_to_chain,
+            config=None,
+            toon_format=toon_format
+        )
 
         return  {
             "type": "QA",

@@ -143,7 +143,7 @@ with col_chat:
     # --- Logica invio messaggi ---
     if send_button and user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
-        if chat_manager._is_ready():
+        if chat_manager.is_ready():
             response = chat_manager.execute_rag_pipeline(user_input)
             if "error" in response:
                 st.session_state.messages.append({"role": "assistant", "content": f"⚠️ Errore: {response['error']}"})

@@ -12,7 +12,7 @@ class QuizTool(QATool, ABC):
     def __init__(self):
         super().__init__()
 
-    def execute(self, qa_chain, query: str, language_hint: str = "italian", toon_format: bool = False, n_questions=5, difficulty="medium"):
+    def execute(self, qa_chain, query, language_hint: str = "italian", toon_format: bool = False, n_questions=5, difficulty="medium"):
 
         response = super().execute(qa_chain, query, language_hint)
         filtered_docs = response["docs_source"]
@@ -38,19 +38,12 @@ class QuizTool(QATool, ABC):
 
         input_to_chain = {"input_documents": filtered_docs, "question": prompt}
 
-        if toon_format:
-            input_to_chain = json_to_toon(input_to_chain)
-
         # Invoca il chain
-        response = qa_chain.combine_documents_chain.invoke(input=input_to_chain)
-
-        """quiz_text = qa_chain.combine_documents_chain.invoke({
-            "input_documents": filtered_docs,
-            "question": prompt
-        })"""
-
-        if toon_format:
-            response = toon_to_json(response)
+        response = qa_chain.combine_documents_chain.invoke(
+            input=input_to_chain,
+            config=None,
+            toon_format=toon_format
+        )
 
         try:
             quiz_data = json.loads(response)

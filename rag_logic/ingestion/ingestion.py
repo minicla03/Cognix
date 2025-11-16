@@ -1,3 +1,4 @@
+import glob
 import logging
 import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -77,8 +78,8 @@ class IngestionFlow(object):
 
         self.retriever_vs = self.vectorstore.as_retriever(search_type="similarity", k=3)
         self.qa_chain.retriever = self.retriever_vs
-
         logger.info("Vectorstore ricaricato con successo.")
+        return True
 
     def add_document_to_vectorstore(self, file_path: str):
         """
@@ -117,6 +118,33 @@ class IngestionFlow(object):
         self.vectorstore.add_documents(chunks)
 
         logger.info(f"Added {len(chunks)} chunks from '{file_path}' to vectorstore.")
+
+    def add_documents_from_folder(self, folder_path: str):
+        """
+        Aggiunge tutti i documenti presenti in una cartella al vectorstore.
+        Solo i file con estensioni supportate (.pdf, .docx, .txt, .html, .url, .csv)
+        verranno processati.
+
+        Args:
+            folder_path (str): Percorso della cartella contenente i documenti.
+        """
+        if not os.path.exists(folder_path):
+            raise FileNotFoundError(f"Cartella '{folder_path}' non trovata.")
+
+        files_added = 0
+        for ext in self.strategies.keys():
+            pattern = os.path.join(folder_path, f"*{ext}")
+            for file_path in glob.glob(pattern):
+                try:
+                    self.add_document_to_vectorstore(file_path)
+                    files_added += 1
+                except Exception as e:
+                    logger.exception(f"Errore aggiungendo '{file_path}': {e}")
+
+        if files_added == 0:
+            logger.warning(f"Nessun file valido trovato in '{folder_path}'.")
+        else:
+            logger.info(f"Aggiunti {files_added} file da '{folder_path}' al vectorstore.")
 
     def delete_document_from_vectorstore(self, file_name: str):
         """

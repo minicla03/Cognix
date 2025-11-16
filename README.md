@@ -76,7 +76,7 @@ python ui.py
 Per testare il sistema su un insieme di domande con risposte attese:
 
 ```bash
-python evaluation_no_memory.py
+python qa_evaluation.py
 ```
 
 Salverà un file `metriche_medie.txt` con le metriche F1, BLEU, ROUGE-L, Similarità semantica, Precision/Recall contestuali.

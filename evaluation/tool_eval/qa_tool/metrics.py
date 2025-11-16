@@ -14,6 +14,7 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge_score import rouge_scorer
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+
 import numpy as np
 import nltk
 
@@ -87,47 +88,10 @@ def compute_rouge(prediction, ground_truth):
     scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     scores = scorer.score(ground_truth, prediction)
     return scores['rougeL'].fmeasure
-
-def compute_context_precision_recall(retrieved_docs, relevant_docs):
-    """
-    Calcola precisione e recall del contesto recuperato.
-    Precisione: frazione di documenti recuperati effettivamente rilevanti
-    Recall: frazione di documenti rilevanti effettivamente recuperati
-    Args:
-        retrieved_docs (list): Lista dei documenti recuperati dal sistema.
-        relevant_docs (list): Lista dei documenti rilevanti attesi.
-    Returns:
-        tuple: (precision, recall) calcolati tra i documenti recuperati e quelli rilevanti.
-    """
-    retrieved_set = set(retrieved_docs)
-    relevant_set = set(relevant_docs)
-    true_positives = len(retrieved_set & relevant_set)
-    precision = true_positives / len(retrieved_set) if retrieved_set else 0.0
-    recall = true_positives / len(relevant_set) if relevant_set else 0.0
-    return precision, recall
-
-def compute_semantic_similarity(prediction, ground_truth):
-    """
-    Calcola similarità semantica tra predizione e riferimento
-    Utilizza embeddings di frasi e cosine similarity:
-    - Cattura similarità di significato oltre la forma lessicale
-    - Modello multilingue permette confronti cross-lingua
-    - Valore tra 0 (nessuna similarità) e 1 (identico)
-    Args:
-        prediction (str): La risposta generata dal modello.
-        ground_truth (str): La risposta corretta attesa.
-    Returns:
-        float: La similarità semantica calcolata tra la previsione e la risposta attesa.
-    """
-    model = get_semantic_model()
-    embeddings = model.encode([prediction, ground_truth])
-    similarity = cosine_similarity(np.array([embeddings[0]]), np.array([embeddings[1]]))[0][0]
-    return max(0.0, min(1.0, similarity))
     
-def evaluate_all(prediction, ground_truth, language='italian'):
+def custom_metrics(prediction, ground_truth, language='italian'):
     return {
         "F1": compute_f1(prediction, ground_truth, language=language),
         "BLEU": compute_bleu(prediction, ground_truth, language=language),
         "ROUGE-L": compute_rouge(prediction, ground_truth),
-        "Semantic Similarity": compute_semantic_similarity(prediction, ground_truth),
     }
