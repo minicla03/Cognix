@@ -1,6 +1,13 @@
-# Q-AmodelAI
+# Cognix
 
-Sistema di domanda e risposta (QA) multilingue basato su documenti PDF caricati dall'utente, con interfaccia grafica tramite Tkinter.
+Sistema di domanda e risposta (QA) multilingue basato su documenti PDF caricati dall'utente
+
+## ⚠️ In sviluppo
+
+Questo progetto è attivamente in sviluppo 🛠️.  
+Nuove funzionalità in arrivo…  
+
+<img width="580" height="450" alt="image" src="https://github.com/user-attachments/assets/cde871c9-4982-4e44-b24a-149ee9456447" />
 
 ---
 
@@ -11,8 +18,7 @@ Questa applicazione consente di:
 - Caricare PDF personali tramite un'interfaccia GUI;
 - Eseguire domande sui contenuti caricati, con supporto multilingua (IT, EN, ES, FR, DE);
 - Visualizzare fonti e documenti usati nella risposta;
-- Valutare automaticamente le risposte tramite uno script di testing con metriche NLP.
-
+- ⚠️ In sviluppo - Possibilità di creare FlashCard e QUiz
 ---
 
 ## ⚙️ Requisiti
@@ -24,70 +30,25 @@ Questa applicazione consente di:
 
 ## 📦 Installazione
 
-```bash
-# Clona il repository
-git clone https://github.com/minicla03/Q-AmodelAI.git
-cd Q-AmodelAI
-
-# (Opzionale) Crea un ambiente virtuale
-python -m venv venv
-source venv/bin/activate      # Su Windows: venv\Scripts\activate
-
-# Installa le dipendenze
-pip install -r requirements.txt
-
-# Avvia Ollama (in un terminale separato)
-ollama run llama3
-```
-
----
-
-## 🚀 Avvio dell'interfaccia grafica
-
-```bash
-python ui.py
-```
-
 ---
 
 ## 📂 Struttura cartelle
 
-- `data/`: PDF caricati dall’utente
-- `chroma_db/`: archivio vettoriale persistente (ChromaDB)
-- `app/`: script per la gestione dell'app
+
 
 ---
 
-## 🔍 Componenti principali della cartella app/
-
-| File/Modulo            | Funzione                                            |
-|------------------------|-----------------------------------------------------|
-| `ui.py`                | Interfaccia GUI (domanda, upload, mostra documenti) |
-| `QASystemManager.py`   | Gestione vectorstore e logica di sistema            |
-| `ingestion.py`         | Parsing PDF, chunking e persistenza con Chroma      |
-| `retrival.py`          | Recupero documenti e costruzione risposte           |
-| `evaluation_script.py` | Testing automatico delle risposte                   |
-| `qa_utils.py`          | Utility di pulizia, rilevamento lingua, ecc.        |
+## 🔍 Componenti principali
 
 ---
 
 ## 📊 Valutazione del sistema QA
 
-Per testare il sistema su un insieme di domande con risposte attese:
-
-```bash
-python qa_evaluation.py
-```
-
-Salverà un file `metriche_medie.txt` con le metriche F1, BLEU, ROUGE-L, Similarità semantica, Precision/Recall contestuali.
 
 ---
 
 ## 🗃️ Gestione documenti
 
-- ✅ Carica PDF: tramite GUI
-- ✅ Mostra documenti: pulsante dedicato
-- 🔜 Cancellazione documenti: da implementare in futuro
 
 ---
 
