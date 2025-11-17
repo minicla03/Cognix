@@ -8,8 +8,6 @@ from persistence.mongo.NotebookRepository import MongoNotebookRepository
 from rag_logic.ingestion.ingestion import IngestionFlow
 from rag_logic.utils import  detect_language_from_query
 
-#from rag_logic.memory.ChatHistory import ChatHistory
-
 from rag_logic.agents.routing_agent import router_agent
 from rag_logic.agents.summarizer_agent import summary_agent
 
@@ -49,7 +47,7 @@ class ChatManager:
         self.persist_dir = persist_dir
 
         self.force_rebuild : bool = False
-        self.last_summary = None
+        self.last_summary = ""
         self.ingestion_layer = None
 
         try:
@@ -106,20 +104,21 @@ class ChatManager:
         context = ContextFactory.create(tool)
         logger.info("Contesto creato correttamente per tool: %s", context)
 
-        summary = None
         if memory_ability:
-            if tool=="QA_pipeline":
-                logger.info("Generazione del sommario delle conversazioni precedenti...")
-                history_mex = self.chat_repository.get_messages(self.chat_id)
-                summary = summary_agent(history_mex, toon_format, language_hint="italian")
-                self.chat_repository.update_last_summary(self.chat_id, summary)
-                logger.info("Sommario aggiornato nella repository.")
+            history_mex = self.chat_repository.get_messages(self.chat_id)
+
+            MIN_MESSAGES_FOR_SUMMARY = 10
+            if len(history_mex) >= MIN_MESSAGES_FOR_SUMMARY:
+                if tool == "QA_pipeline":
+                    logger.info("Generazione del sommario delle conversazioni precedenti...")
+                    self.last_summary = summary_agent(history_mex, toon_format, language_hint="italian")
+                    logger.info("Sommario aggiornato nella repository.")
             else:
-                summary = self.chat_repository.get_last_summary(self.chat_id)
+                self.last_summary = self.notebook_repository.get_last_summary(self.chat_id)
 
         query={
             "user_query": user_query,
-            "summary": summary,
+            "summary": self.last_summary,
         }
 
         try:
@@ -160,7 +159,7 @@ class ChatManager:
 
         try:
             self.ingestion_layer.add_document_to_vectorstore(file_path)
-            #self.chat_repository.add_documents(self.chat_id, file_path) #todo:mongo
+            self.notebook_repository.update_chat_metadata(self.notebook_id, self.chat_id, docs=[file_path])
             print(f"[DEBUG] Documento aggiunto al vectorstore con successo")
         except Exception as e:
             print(f"[ERROR] Errore durante l'aggiunta al vectorstore: {e}")
@@ -203,7 +202,7 @@ class ChatManager:
         """
 
         try:
-            return [] #self.chat_repository.get_documents(self.chat_id) #todo:mongo
+            return self.notebook_repository.get_list_docs(self.notebook_id)
         except Exception as e:
             print(f"[ERROR] Impossibile elencare i documenti: {e}")
             return []
@@ -231,24 +230,21 @@ class ChatManager:
             return
 
         try:
-            if self.last_summary:
-                try:
-                    self.chat_repository.update_last_summary(self.chat_id, self.last_summary) #todo: mongo
-                    logger.info(f"Last summary saved for chat {self.chat_id}")
-                except Exception as e:
-                    logger.warning(f"Failed to save last summary for chat {self.chat_id}: {e}")
 
-            if self.ingestion_layer:
-                try:
-                    self.ingestion_layer.close()
-                    logger.info(f"Ingestion layer closed for notebook {self.notebook_id}")
-                except AttributeError:
-                    # Se non esiste un close specifico, ignora
-                    pass
+            if self.last_summary:
+                self.notebook_repository.update_chat_metadata(self.chat_id, self.last_summary)
+                logger.info(f"Last summary saved for chat {self.chat_id}")
+
+            if self.chat_repository:
+                self.chat_repository.reset_chat(self.chat_id)
+                logger.info(f"History chat cancelled for {self.notebook_id}")
 
         except Exception as e:
             logger.error(f"Error while closing ChatManager for chat {self.chat_id}: {e}")
         finally:
+            self.last_summary = ""
             self.ingestion_layer = None
+            self.notebook_repository = None
+            self.chat_repository = None
             self.ready = False
             logger.info(f"ChatManager closed for chat {self.chat_id}")

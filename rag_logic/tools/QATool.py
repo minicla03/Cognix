@@ -59,7 +59,7 @@ class QATool(IToolStrategy):
 
         return  {
             "type": "QA",
-            "ai_response": response ,
+            "ai_response": response["output_text"] ,
             "docs_source": filtered_docs,
             "metadata": {"language": language_hint, "max_sources": max_sources}
         }

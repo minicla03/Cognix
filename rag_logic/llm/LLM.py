@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 
 from langchain_core.prompt_values import StringPromptValue, ChatPromptValue
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +20,12 @@ import os
 from rag_logic.utils import toon_to_json, json_to_toon
 
 
-class Ollama(Runnable):
+class LLM(Runnable):
     """
     Thread-safe singleton for managing a single instance of ChatOllama.
 
     This class exposes only one public entry point — the `chat` method — while
-    fully encapsulating the underlying Ollama client.
+    fully encapsulating the underlying LLM client.
 
     A double-checked locking mechanism ensures safe initialization in
     multithreaded environments.
@@ -42,7 +44,7 @@ class Ollama(Runnable):
 
         Returns
         -------
-        Ollama
+        LLM
             The unique singleton instance of the class.
         """
 
@@ -55,7 +57,7 @@ class Ollama(Runnable):
 
     def __initialize_client(self):
         """
-        Privately initializes the Ollama client.
+        Privately initializes the LLM client.
 
         The method loads the `OLLAMA_API_KEY` environment variable,
         creates the client instance, and stores it as a private attribute.
@@ -63,11 +65,17 @@ class Ollama(Runnable):
         direct external access.
         """
         load_dotenv()
-        api_key = os.getenv("OLLAMA_API_KEY")
+        # api_key = os.getenv("OLLAMA_API_KEY")
+        llama_key = os.getenv("OPEN_ROUTER")
 
-        self.__client = Client(
-            host="https://ollama.com",
+        """self.__client = Client(
+            #host="https://ollama.com",
             headers={"Authorization": f"Bearer {api_key}"}
+        )"""
+
+        self.__client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=llama_key,
         )
 
     def invoke(self, input: Input, config: RunnableConfig | None = None, **kwargs: Any) -> Output:
@@ -112,8 +120,8 @@ class Ollama(Runnable):
 
         logger.info("\nTOON format: %s", messages)
 
-        response = self.__client.chat(
-            model="gpt-oss:20b-cloud",
+        """response = self.__client.chat(
+            model="gpt-oss:120b-cloud",
             messages=messages,
             options={
                 "temperature": 0.1,
@@ -123,14 +131,19 @@ class Ollama(Runnable):
                 "repeat_penalty": 1.1
             },
             stream=False
+        )"""
+
+        response = self.__client.chat.completions.create(
+              model="deepseek/deepseek-chat-v3.1:free",
+              messages=messages
         )
 
         logger.info("Response: %s", response)
-        response = response.model_dump_json()
+        if isinstance(response, str):
+            response = json.loads(response)
         logger.info("Response: %s", response)
 
-        if kwargs.get("toon_format", None):
-            response = toon_to_json(response)
+        #if kwargs.get("toon_format", None):
+        #    response = toon_to_json(response)
 
-        return response['message']['content']
-
+        return response.choices[0].message.content

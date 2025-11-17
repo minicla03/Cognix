@@ -130,6 +130,7 @@ celerybeat.pid
 
 # Environments
 .env
+evaluation/.env.local
 .venv
 env/
 venv/
@@ -198,3 +199,5 @@ cython_debug/
 .gitignore
 presentation/docs
 presentation/chroma_db
+.deepeval
+test/

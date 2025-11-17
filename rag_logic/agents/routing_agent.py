@@ -1,7 +1,7 @@
 import re
 import logging
 
-from rag_logic.llm.Ollama import Ollama
+from rag_logic.llm.LLM import LLM
 from rag_logic.utils import json_to_toon, toon_to_json
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ def router_agent(user_query, toon_format, language_hint="italian"):
     """
     Route the user's query to the appropriate RAG subsystem (QA, Flashcard, or Quiz).
 
-    This function uses an LLM (via Ollama) to analyze the intent of the user's request
+    This function uses an LLM (via LLM) to analyze the intent of the user's request
     and decide which internal tool should handle it.
 
     Parameters
@@ -71,19 +71,17 @@ def router_agent(user_query, toon_format, language_hint="italian"):
         {"role": "user", "content": user_query}
     ]
 
-    if toon_format:
-        messages = json_to_toon(messages)
-
-    # Invoca il chain
     try:
 
-        response = Ollama().invoke(messages)#(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
-        logger.info("Invio messaggi al modello Ollama...")
+        response = LLM().invoke(
+            input=messages,
+            config=None,
+            toon_format=toon_format
+        )
 
-        if toon_format:
-            response = toon_to_json(response)
+        #(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+        logger.info("Invio messaggi al modello LLM...")
 
-        #response = llm.invoke(messages)
         text = response.strip().upper() #.content
         logger.info("Risposta grezza del modello: %s", text)
 

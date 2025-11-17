@@ -9,7 +9,7 @@ from langchain_classic.chains import RetrievalQA
 #from langchain.chains.retrieval import create_retrieval_chain
 
 from rag_logic.ingestion.DocumentLoaderStrategy import *
-from rag_logic.llm.Ollama import Ollama
+from rag_logic.llm.LLM import LLM
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,7 +46,7 @@ class IngestionFlow(object):
 
         self.retriever_vs = self.vectorstore.as_retriever(search_type="similarity", k=3)
         self.splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=200)
-        self.llm = Ollama() #ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
+        self.llm = LLM() #ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
         self.qa_chain = RetrievalQA.from_chain_type(llm=self.llm, retriever=self.retriever_vs, return_source_documents=True)
         #self.qa_chain = create_retrieval_chain(self.retriever_vs, self.llm)
 

@@ -1,5 +1,4 @@
-from rag_logic.llm.Ollama import Ollama
-from rag_logic.utils import json_to_toon, toon_to_json
+from rag_logic.llm.LLM import LLM
 
 
 def summary_agent(conversation_history: list,  toon_format, language_hint="italian"):
@@ -30,14 +29,8 @@ def summary_agent(conversation_history: list,  toon_format, language_hint="itali
         {"role": "user", "content": conv_text}
     ]
 
-    if toon_format:
-        messages = json_to_toon(messages)
+    summary = LLM().invoke(messages)#ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
 
-
-    summary = Ollama().invoke(messages)#ChatOllama(model="llama3:latest", temperature=0.1, top_p=0.95, top_k=40)
-
-    if toon_format:
-        summary = toon_to_json(messages)
     #response = llm.invoke(messages)
     print(summary)
     return summary

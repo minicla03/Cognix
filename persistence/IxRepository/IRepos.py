@@ -43,19 +43,11 @@ class IChatRepository(BaseRepository):
         pass
 
     @abstractmethod
-    def delete_messages(self, chat_id: str) -> bool:
+    def reset_chat(self, chat_id: str) -> bool:
         pass
 
     @abstractmethod
-    def update_last_summary(self, chat_id: str, summary: str) -> None:
-        pass
-
-    @abstractmethod
-    def get_last_summary(self, chat_id: str) -> Optional[str]:
-        pass
-
-    @abstractmethod
-    def delete_last_summary(self, chat_id: str) -> bool:
+    def get_chat_id_by_notebook(self, notebook_id: str) -> str:
         pass
 
 class INotebookRepository(BaseRepository):
@@ -75,12 +67,25 @@ class INotebookRepository(BaseRepository):
         pass
 
     @abstractmethod
-    def update_chat_metadata(self, notebook_id: str, last_chat_id: str, summary: str) -> None:
+    def update_chat_metadata(self, notebook_id: str, chat_id: str, summary: Optional[str] = None,docs: Optional[List[str]] = None) -> None:
         pass
 
     @abstractmethod
-    def update_notebook(self, notebook):
+    def update_last_summary(self, chat_id: str, summary: str) -> None:
         pass
+
+    @abstractmethod
+    def get_last_summary(self, chat_id: str) -> Optional[str]:
+        pass
+
+    @abstractmethod
+    def delete_last_summary(self, chat_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    def get_list_docs(self, notebook_id):
+        pass
+
 
 class IFlashcardRepository(BaseRepository):
     @abstractmethod

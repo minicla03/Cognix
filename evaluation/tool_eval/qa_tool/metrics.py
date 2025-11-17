@@ -1,27 +1,9 @@
-"""
-Questo modulo contiene funzioni per valutare le prestazioni di un sistema di domande e risposte.
-Le metriche calcolate includono:
-- Exact Match
-- F1 Score
-- BLEU Score
-- ROUGE-L
-- Context Precision
-- Context Recall
-"""
-
-from nltk.tokenize import word_tokenize
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge_score import rouge_scorer
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
-import numpy as np
-import nltk
-
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
 
 _semantic_model = None
 
@@ -45,8 +27,8 @@ def compute_f1(prediction, ground_truth, language='italian'):
     Returns:
         float: L'F1 Score calcolato tra la previsione e la risposta attesa.
     """
-    pred_tokens = word_tokenize(prediction.lower(), language=language)
-    gt_tokens = word_tokenize(ground_truth.lower(), language=language)
+    pred_tokens = tokenizer.tokenize(prediction.lower())
+    gt_tokens = tokenizer.tokenize(ground_truth.lower())
     common = set(pred_tokens) & set(gt_tokens)
     if len(common) == 0:
         return 0.0
@@ -68,9 +50,10 @@ def compute_bleu(prediction, ground_truth, language='italian'):
     Returns:
         float: Il BLEU Score calcolato tra la previsione e la risposta attesa.
     """
-    reference = [word_tokenize(ground_truth.lower(), language=language)]
-    hypothesis = word_tokenize(prediction.lower(), language=language)
-    return sentence_bleu(reference, hypothesis, smoothing_function=SmoothingFunction().method1)
+    reference = [tokenizer.tokenize(ground_truth.lower())]
+    hypothesis = tokenizer.tokenize(prediction.lower())
+    smooth = SmoothingFunction().method1
+    return sentence_bleu(reference, hypothesis, smoothing_function=smooth)
 
 def compute_rouge(prediction, ground_truth):
     """

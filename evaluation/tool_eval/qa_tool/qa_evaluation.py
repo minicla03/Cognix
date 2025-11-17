@@ -1,4 +1,8 @@
+from dotenv import load_dotenv
 import os
+
+load_dotenv("../../.env.local")
+print(os.getenv("OPENAI_API_KEY"))
 
 base_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(base_path, "..", "data")
@@ -16,6 +20,7 @@ from evaluation.tool_eval.qa_tool.qa_testset import TEST_CASES
 from evaluation.tool_eval.qa_tool.metrics import custom_metrics
 
 from deepeval import evaluate
+from deepeval.models import OllamaModel, DeepSeekModel
 from deepeval.test_case import LLMTestCase
 from deepeval.metrics import (
     ContextualPrecisionMetric,
@@ -101,10 +106,21 @@ def generate_html_results(results: list, output_file="results.html"):
 
 def evaluate_qa_tool(dataset, qa_chain):
 
-    llm_test_cases = []
+    deepeval_results = []
+    custom_metric_results = []
     results = []
 
-    for test_case_data in dataset:
+    ollama_model = DeepSeekModel(model="deepseek-chat", api_key=os.getenv("OPENAI_API_KEY"))
+
+    metrics = [
+        AnswerRelevancyMetric(model=ollama_model),
+        ContextualPrecisionMetric(model=ollama_model),
+        ContextualRecallMetric(model=ollama_model),
+        ContextualRelevancyMetric(model=ollama_model),
+        FaithfulnessMetric(model=ollama_model)
+    ]
+
+    for idx, test_case_data in enumerate(dataset):
         for config in CONFIGS:
 
             processed_query = {
@@ -121,32 +137,24 @@ def evaluate_qa_tool(dataset, qa_chain):
                 toon_format=config["toon_format"]
             )
 
-            custom_metric_result = custom_metrics(
-                output["ai_response"],
-                test_case_data["expected_answer"],
-                language=language_hint
+            custom_metric_results.append(
+                custom_metrics(
+                    output["ai_response"],
+                    test_case_data["expected_answer"],
+                    language=language_hint
+                )
             )
 
             llm_test_case = LLMTestCase(
-                input=processed_query["query"] + "\nSummary:" + (processed_query["summary"] or ""),
+                input=processed_query["user_query"] + "\nSummary:" + (processed_query["summary"] or ""),
                 actual_output=output["ai_response"],
-                retrieval_context=output.get("docs_source", []),
+                retrieval_context=[doc.page_content for doc in output.get("docs_source", [])],
                 expected_output=test_case_data["expected_answer"]
             )
 
-            llm_test_cases.append((llm_test_case, processed_query, config, custom_metric_result))
+            deepeval_results.append(evaluate([llm_test_case], metrics=metrics))
 
-    metrics = [
-        AnswerRelevancyMetric(),
-        ContextualPrecisionMetric(),
-        ContextualRecallMetric(),
-        ContextualRelevancyMetric(),
-        FaithfulnessMetric()
-    ]
-
-    deepeval_results = evaluate([tc[0] for tc in llm_test_cases], metrics=metrics)
-
-    for idx, (llm_test_case, processed_query, config, custom_metric_result) in enumerate(llm_test_cases):
+    for idx, (llm_test_case, processed_query, config, custom_metric_result) in enumerate(deepeval_results):
         results.append({
             "query": processed_query["query"],
             "summary_used": processed_query["summary"] is not None,

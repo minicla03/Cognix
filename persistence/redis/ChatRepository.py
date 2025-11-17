@@ -11,7 +11,8 @@ class ChatRepository(IChatRepository):
 
     PREFIX = "chat_id:"
     CHAT_MESSAGES = "chat_messages:"
-    LAST_SUMMARY = "last_summary:"
+
+    MAX_MESSAGES = 10
 
     def __init__(self, db):
         """
@@ -49,13 +50,15 @@ class ChatRepository(IChatRepository):
             logging.error(f"Failed to create chat for notebook {notebook_id}: {e}")
             raise
 
+
     def add_message(self, chat_id: str, message: Dict[str, str]) -> None:
-        """Store a message in the chat history."""
+        """Store a message in the chat history, keeping only the last MAX_MESSAGES messages."""
         if not isinstance(message, dict) or "type" not in message or "mex" not in message:
             raise ValueError("Invalid message format. Expected a dict with keys 'type' and 'mex'.")
 
         try:
             self.redis.rpush(f"{self.CHAT_MESSAGES}{chat_id}", json.dumps(message))
+            self.redis.ltrim(f"{self.CHAT_MESSAGES}{chat_id}", -MAX_MESSAGES, -1)
         except Exception as e:
             logging.error(f"Failed to store message for chat {chat_id}: {e}")
             raise
@@ -75,15 +78,16 @@ class ChatRepository(IChatRepository):
             logging.error(f"Failed to retrieve messages for chat {chat_id}: {e}")
             raise
 
-    def delete_messages(self, chat_id: str) -> bool:
-        """Delete the entire message history for a chat session."""
+    def reset_chat(self, chat_id: str) -> None:
+        """
+        Reset the chat by deleting all messages and optionally the last summary.
+        """
         try:
             self.redis.delete(f"{self.CHAT_MESSAGES}{chat_id}")
-            logging.info(f"Deleted message history for chat {chat_id}")
-            return True
+            logging.info(f"Chat {chat_id} has been reset.")
         except Exception as e:
-            logging.error(f"Failed to delete messages for chat {chat_id}: {e}")
-            return False
+            logging.error(f"Failed to reset chat {chat_id}: {e}")
+            raise
 
     def get_chat_id_by_notebook(self, notebook_id: str) -> str:
         """
@@ -97,53 +101,3 @@ class ChatRepository(IChatRepository):
         """
         chat_id = self.redis.get(f"{self.PREFIX}{notebook_id}")
         return chat_id.decode("utf-8") if chat_id else None
-
-    def update_last_summary(self, chat_id: str, summary: str) -> None:
-        """
-        Store or update the last summary for a chat.
-
-        Args:
-            chat_id (str): Unique identifier of the chat session.
-            summary (str): The summary text to store.
-        """
-        try:
-            self.redis.set(f"{self.LAST_SUMMARY}{chat_id}", summary)
-            logging.info(f"Updated last summary for chat {chat_id}")
-        except Exception as e:
-            logging.error(f"Failed to update last summary for chat {chat_id}: {e}")
-            raise
-
-    def get_last_summary(self, chat_id: str) -> str:
-        """
-        Retrieve the last summary of a chat.
-
-        Args:
-            chat_id (str): Unique identifier of the chat session.
-
-        Returns:
-            str: The last summary, or None if not set.
-        """
-        try:
-            summary = self.redis.get(f"{self.LAST_SUMMARY}{chat_id}")
-            return summary.decode("utf-8") if summary else None
-        except Exception as e:
-            logging.error(f"Failed to retrieve last summary for chat {chat_id}: {e}")
-            raise
-
-    def delete_last_summary(self, chat_id: str) -> bool:
-        """
-        Delete the last summary associated with a chat.
-
-        Args:
-            chat_id (str): Unique identifier of the chat session.
-
-        Returns:
-            bool: True if deletion was successful, False otherwise.
-        """
-        try:
-            self.redis.delete(f"{self.LAST_SUMMARY}{chat_id}")
-            logging.info(f"Deleted last summary for chat {chat_id}")
-            return True
-        except Exception as e:
-            logging.error(f"Failed to delete last summary for chat {chat_id}: {e}")
-            return False

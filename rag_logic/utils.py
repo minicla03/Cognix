@@ -1,15 +1,7 @@
-"""
-Funzioni di utilità per la gestione delle domande e risposte.
-Queste funzioni includono:
-- detect_language_from_query: per rilevare la lingua della domanda basata su parole chiave.
-- clean_text: per pulire il testo rimuovendo spazi e caratteri non necessari.
-- LANGUAGE_ALIASES: un dizionario per mappare le lingue a nomi alternativi.
-"""
-
 import re
+from typing import Any, Dict, Literal
 
 from toon_format import encode, decode, EncodeOptions, DecodeOptions
-from typing import Any, Dict, Literal
 
 LANGUAGE_ALIASES = {
     "italian": ["italiano", "italian"],

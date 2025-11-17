@@ -24,7 +24,7 @@ Questa applicazione consente di:
 ## ⚙️ Requisiti
 
 - Python 3.10+
-- [Ollama](https://ollama.com/) installato e attivo con modello `llama3:latest`
+- [LLM](https://ollama.com/) installato e attivo con modello `llama3:latest`
 
 ---
 
