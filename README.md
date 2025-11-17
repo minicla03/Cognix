@@ -1,4 +1,8 @@
-# Cognix
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/16191aa5-d343-45f7-8910-8867d5eb4661" alt="Cognix Icon" width="250">
+</p>
+
+# 🤖🧠 Cognix
 
 Sistema di domanda e risposta (QA) multilingue basato su documenti PDF caricati dall'utente
 
