@@ -23,7 +23,7 @@ The primary aim of this project is to develop an intelligent, multilingual docum
 
 2. **Semantic Search Implementation**
    - Integrate multilingual embedding models for cross-language semantic similarity
-   - Implement vector database storage using Chroma for persistent document indexing
+   - Implement vector database storage using ChromaDB for persistent document indexing
    - Develop configurable retrieval mechanisms with similarity thresholds
 
 3. **Intelligent Tool Routing**
@@ -60,7 +60,7 @@ Modern LLMs such as GPT-4, LLaMA, and DeepSeek have demonstrated remarkable capa
 
 ### Multilingual NLP and Embeddings
 
-Cross-lingual understanding has been significantly advanced by multilingual embedding models such as mBERT and multilingual sentence transformers. The paraphrase-multilingual-MiniLM-L12-v2 model used in Cognix enables semantic similarity computation across different languages, allowing users to query documents regardless of the language mismatch between query and content.
+Cross-lingual understanding has been significantly advanced by multilingual embedding models such as mBERT and multilingual sentence transformers. The paraphrase-multilingual-MiniLM-L12-v2 model used in Cognix enables semantic similarity computation across different languages, allowing users to query documents even when there is a language mismatch between query and content.
 
 ### Document Processing and Chunking
 
@@ -203,7 +203,7 @@ The summarization component was evaluated using four key dimensions following Kr
 The LLM was configured with the following hyperparameters:
 | Parameter | Value |
 |-----------|-------|
-| Model | deepseek/deepseek-chat-v3.1 |
+| Model | deepseek/deepseek-chat-v3.1 (via OpenRouter) |
 | Temperature | 0.1 |
 | Top-p | 0.9 |
 | Context Window | 4096 tokens |
@@ -231,9 +231,9 @@ This report presented Cognix, a multilingual document-based QA system that succe
 
 **Limitations and Future Work:**
 1. Router accuracy for Flashcard and Quiz tools requires improvement, potentially through fine-tuning or enhanced few-shot prompting
-2. The system currently lacks conversation memory across sessions
-3. Real-time document updates and incremental indexing could enhance user experience
-4. Integration of multimodal capabilities (images, tables) would extend document coverage
+2. The system would benefit from conversation memory across sessions for better context continuity
+3. Enhanced handling of ambiguous and cross-language queries could improve tool selection accuracy
+4. Support for extracting information from document images and tables would extend coverage
 
 **Future Directions:**
 - Implement conversation summarization for long-term memory
@@ -253,7 +253,7 @@ Cognix demonstrates the viability of RAG-based systems for educational and profe
 
 3. Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., ... & Kiela, D. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. *Advances in Neural Information Processing Systems*, 33, 9459-9474.
 
-4. Liu, N., Zhang, S., Zhang, K., Zhang, C., Li, T., & Liu, Y. (2023). LLM Augmented LLMs: Expanding Capabilities through Composition. *arXiv preprint arXiv:2401.02412*.
+4. Liu, N., Lin, K., Hewitt, J., Paranjape, A., Bevilacqua, M., Petroni, F., & Liang, P. (2023). Lost in the Middle: How Language Models Use Long Contexts. *arXiv preprint arXiv:2307.03172*.
 
 5. Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. *Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing (EMNLP)*.
 
