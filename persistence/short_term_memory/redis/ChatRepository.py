@@ -58,7 +58,7 @@ class ChatRepository(IChatRepository):
 
         try:
             self.redis.rpush(f"{self.CHAT_MESSAGES}{chat_id}", json.dumps(message))
-            self.redis.ltrim(f"{self.CHAT_MESSAGES}{chat_id}", -MAX_MESSAGES, -1)
+            self.redis.ltrim(f"{self.CHAT_MESSAGES}{chat_id}", ChatRepository.MAX_MESSAGES, -1)
         except Exception as e:
             logging.error(f"Failed to store message for chat {chat_id}: {e}")
             raise

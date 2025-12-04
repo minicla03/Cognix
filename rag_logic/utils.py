@@ -33,7 +33,7 @@ def detect_language_from_query(query):
             ]
             if any(re.search(pat, query_lower) for pat in patterns):
                 return lang
-    return None
+    return "italian"
 
 
 def json_to_toon(data: Dict[str, Any], *,

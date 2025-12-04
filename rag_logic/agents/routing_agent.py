@@ -1,8 +1,7 @@
-import re
 import logging
+import re
 
 from rag_logic.llm.LLM import LLM
-from rag_logic.utils import json_to_toon, toon_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,6 @@ def router_agent(user_query, toon_format, language_hint="italian"):
     ]
 
     try:
-
         response = LLM().invoke(
             input=messages,
             config=None,

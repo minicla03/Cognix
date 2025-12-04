@@ -3,8 +3,8 @@ import os
 import shutil
 import traceback
 
-from persistence.mongo.MongoDBMS import MongoConnectionManager
-from persistence.mongo.NotebookRepository import MongoNotebookRepository
+from persistence.long_term_memory.mongo.MongoDBMS import MongoConnectionManager
+from persistence.long_term_memory.mongo.NotebookRepository import MongoNotebookRepository
 from rag_logic.ingestion.ingestion import IngestionFlow
 from rag_logic.utils import  detect_language_from_query
 
@@ -14,8 +14,8 @@ from rag_logic.agents.summarizer_agent import summary_agent
 from rag_logic.tools.ITool import ContextFactory
 
 from persistence.IxRepository import IRepos
-from persistence.redis.RedisDBMS import RedisConnectionManager
-from persistence.redis.ChatRepository import ChatRepository
+from persistence.short_term_memory.redis.RedisDBMS import RedisConnectionManager
+from persistence.short_term_memory.redis.ChatRepository import ChatRepository
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +28,8 @@ class ChatManager:
        Manages a chat session for a user, including document management,
        chat history, and execution of the RAG (Retrieval-Augmented Generation) pipeline.
     """
+
+    MIN_MESSAGES_FOR_SUMMARY = 5
 
     def __init__(self, user_id, notebook_id, chat_id, document_path="docs", persist_dir="chroma_db"):
         """
@@ -107,12 +109,10 @@ class ChatManager:
         if memory_ability:
             history_mex = self.chat_repository.get_messages(self.chat_id)
 
-            MIN_MESSAGES_FOR_SUMMARY = 10
-            if len(history_mex) >= MIN_MESSAGES_FOR_SUMMARY:
-                if tool == "QA_pipeline":
-                    logger.info("Generazione del sommario delle conversazioni precedenti...")
-                    self.last_summary = summary_agent(history_mex, toon_format, language_hint="italian")
-                    logger.info("Sommario aggiornato nella repository.")
+            if len(history_mex) >= ChatManager.MIN_MESSAGES_FOR_SUMMARY:
+                logger.info("Generazione del sommario delle conversazioni precedenti...")
+                self.last_summary = summary_agent(history_mex, toon_format, language_hint="italian")
+                logger.info("Sommario aggiornato.")
             else:
                 self.last_summary = self.notebook_repository.get_last_summary(self.chat_id)
 

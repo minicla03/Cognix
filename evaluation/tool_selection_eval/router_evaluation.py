@@ -10,7 +10,7 @@ from rag_logic.utils import detect_language_from_query
 logger = logging.getLogger(__name__)
 
 
-def generate_test_result_html(results, aggregate_metrics, aggregate_metrics_tool, filename="router_test_report.html"):
+def generate_test_result_html(results, aggregate_metrics, aggregate_metrics_tool, filename="router_test_report_nv.html"):
 
     total_tests = aggregate_metrics["total_tests"]
     total_success = aggregate_metrics["total_success"]
@@ -154,7 +154,7 @@ def aggregate_metrics_per_tool(results):
 
 def evaluate_router(test_dataset):
 
-    toon_format_options = [False, True]
+    toon_format_options = [False]
     results = {}
 
     for item in test_dataset:
@@ -166,7 +166,7 @@ def evaluate_router(test_dataset):
 
         for toon_format in toon_format_options:
 
-            predicted = router_agent(query, language_hint, toon_format)
+            predicted = router_agent(query, toon_format, language_hint,)
 
             test_case = LLMTestCase(
                 input=query,
@@ -192,7 +192,7 @@ def evaluate_router(test_dataset):
 
     return results
 
-if __name__ == "__main__":
+def start_evaluate_router():
     dataset = TEST_ROUTER_DATASET + COMPLEX_CASES
     results = evaluate_router(dataset)
 
@@ -210,3 +210,6 @@ if __name__ == "__main__":
     aggregate_metrics = aggregate_metrics_calculate(results)
     aggregate_metrics_tool = aggregate_metrics_per_tool(results)
     generate_test_result_html(results, aggregate_metrics, aggregate_metrics_tool)
+
+if __name__ == '__main__':
+    start_evaluate_router()

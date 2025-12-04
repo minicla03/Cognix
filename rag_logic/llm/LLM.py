@@ -64,19 +64,19 @@ class LLM(Runnable):
         Keeping the client private ensures proper encapsulation and prevents
         direct external access.
         """
-        load_dotenv()
-        # api_key = os.getenv("OLLAMA_API_KEY")
-        llama_key = os.getenv("OPEN_ROUTER")
+        load_dotenv(dotenv_path=".env", override=True)
+        api_key = os.getenv("OLLAMA_API_KEY")
+        print(api_key)
 
-        """self.__client = Client(
-            #host="https://ollama.com",
+        self.__client = Client(
+            host="https://ollama.com",
             headers={"Authorization": f"Bearer {api_key}"}
-        )"""
+        )
 
-        self.__client = OpenAI(
+        """self.__client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=llama_key,
-        )
+        )"""
 
     def invoke(self, input: Input, config: RunnableConfig | None = None, **kwargs: Any) -> Output:
         """
@@ -114,13 +114,12 @@ class LLM(Runnable):
         if not messages:
             raise ValueError("Input deve contenere 'messages' oppure una stringa.")
 
-        logger.debug(f"toon: {kwargs.get("toon_format", None)}")
-        if kwargs.get("toon_format", None):
+        if kwargs.get("toon_format", False):
             messages = json_to_toon(messages)
 
-        logger.info("\nTOON format: %s", messages)
+        logger.info("\nFORMAT: \n%s", messages)
 
-        """response = self.__client.chat(
+        response = self.__client.chat(
             model="gpt-oss:120b-cloud",
             messages=messages,
             options={
@@ -131,19 +130,19 @@ class LLM(Runnable):
                 "repeat_penalty": 1.1
             },
             stream=False
-        )"""
+        )
 
-        response = self.__client.chat.completions.create(
+        """response = self.__client.chat.completions.create(
               model="deepseek/deepseek-chat-v3.1:free",
               messages=messages
-        )
+        )"""
 
         logger.info("Response: %s", response)
         if isinstance(response, str):
             response = json.loads(response)
         logger.info("Response: %s", response)
 
-        #if kwargs.get("toon_format", None):
-        #    response = toon_to_json(response)
+        if kwargs.get("toon_format", False):
+            response = toon_to_json(response)
 
-        return response.choices[0].message.content
+        return response.message.content #choices[0].message

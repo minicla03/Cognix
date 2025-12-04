@@ -2,11 +2,10 @@ from typing import Dict, List, Optional
 
 from persistence.IxRepository.IRepos import INotebookRepository, IChatRepository
 from persistence.model.Notebook import Notebook
-from persistence.mongo.MongoDBMS import MongoConnectionManager
-from persistence.mongo.NotebookRepository import MongoNotebookRepository
-from persistence.redis.ChatRepository import ChatRepository
-from persistence.redis.RedisDBMS import RedisConnectionManager
-from rag_logic.memory.ChatManager import ChatManager
+from persistence.long_term_memory.mongo.MongoDBMS import MongoConnectionManager
+from persistence.long_term_memory.mongo.NotebookRepository import MongoNotebookRepository
+from persistence.short_term_memory.redis.ChatRepository import ChatRepository
+from persistence.short_term_memory.redis.RedisDBMS import RedisConnectionManager
 
 
 class NotebookManager:

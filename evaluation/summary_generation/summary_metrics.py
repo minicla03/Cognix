@@ -1,116 +1,90 @@
-from typing import Dict, List
-import json
+import os
+from deepeval.metrics import SummarizationMetric, HallucinationMetric, FaithfulnessMetric
+from deepeval.models import OllamaModel
 
-import nltk
-import numpy as np
-from deepeval.metrics import SummarizationMetric, GEval, HallucinationMetric
-from langchain_community.embeddings import OpenAIEmbeddings
-from scipy.stats import cosine
+assessment_questions = [
+    # Accuratezza / Precision
+    "Il riassunto riporta correttamente i fatti principali della conversazione?",
+    "Ci sono affermazioni nel riassunto che non compaiono nella conversazione?",
+    "Il riassunto evita interpretazioni o distorsioni dei messaggi originali?",
+    "Le informazioni riportate sono coerenti con il contenuto della conversazione?",
 
-"""
-Kryscinski et al. (2019) proposed four dimensions for evaluating abstractive summaries:
+    # Completezza / Coverage
+    "Tutti i temi principali della conversazione sono inclusi nel riassunto?",
+    "Sono stati omessi punti critici o importanti?",
+    "Il riassunto cattura correttamente le richieste e risposte chiave?",
+    "Le informazioni secondarie o irrilevanti sono state ridotte senza perdere contenuto utile?",
 
-Fluency: Each sentence should be well-formed and free of grammatical errors or random capitalization that makes it hard to read
-Coherence: Collective quality of all sentences, where the summary should be well-structured and not just a heap of information
-Relevance: Picking the important aspects from the source document to include in the summary and excluding the rest
-Consistency: The summary and source document should be factually consistent aka faithful (i.e., no new information in the summary that’s not in the source)
-"""
+    # Coerenza e chiarezza
+    "Il riassunto è scorrevole e facile da leggere?",
+    "La sequenza delle informazioni ha senso e segue la conversazione?",
+    "Ci sono contraddizioni o incoerenze interne nel riassunto?",
+    "Il linguaggio usato è chiaro e non ambiguo?",
 
-def get_fluency_metric():
-    # alignment and coverage. These correspond closely to the precision and recall
+    # Rilevanza e utilità
+    "Il riassunto permette di comprendere la conversazione senza leggerla tutta?",
+    "Le informazioni riportate sono rilevanti rispetto all'obiettivo del riassunto?",
+    "Il riassunto evidenzia le decisioni o azioni principali emerse dalla conversazione?",
+    "Il riassunto può essere usato come riferimento affidabile per chi non ha letto la conversazione?",
 
-    return SummarizationMetric(
-        verbose_mode=True,
-        n=20,
-        truths_extraction_limit=20,
-    )
+    # Ragionamento / motivazione
+    "Eventuali conclusioni presenti nel riassunto sono supportate dai dati della conversazione?",
+    "Il riassunto esplicita motivazioni o contesto quando necessario?",
+    "Il riassunto evita inferenze non supportate dai messaggi originali?",
+    "Il riassunto sintetizza correttamente i punti chiave senza aggiungere contenuto inventato?"
+]
 
+def get_list_deep_eval_metrics():
 
-def get_consistency_metric(llm):
-    """
-    Consistency / Faithfulness: il sommario non deve introdurre informazioni false.
-    Usare LLM per confronto sommario vs testo originale.
-    """
-    def consistency_fn(summary: str, reference: str) -> float:
-        prompt = (
-            "Sei un valutatore. Controlla se il seguente sommario "
-            "è coerente con il testo originale. Restituisci un punteggio tra 0 e 1.\n\n"
-            f"Testo originale:\n{reference}\n\n"
-            f"Sommario:\n{summary}\n\n"
-            "Rispondi solo con il punteggio float tra 0 e 1."
+    ollama_model = OllamaModel(model="gpt-oss:120b-cloud")#, api_key=os.getenv("OLLAMA_API_KEY"))
+
+    return [
+        SummarizationMetric(
+            verbose_mode=True,
+            assessment_questions=assessment_questions,
+            n=20,
+            model=ollama_model,
+            truths_extraction_limit=20,
+            include_reason=True
+        ),
+        HallucinationMetric(
+            verbose_mode=True,
+            include_reason=True,
+            model=ollama_model,
+        ),
+        FaithfulnessMetric(
+            threshold=0.7,
+            include_reason=True,
+            model=ollama_model,
         )
-        response = llm.invoke({"role": "user", "content": prompt})
-        try:
-            score = float(response)
-        except:
-            score = 0.0
-        return score
+    ]
 
-    return CustomMetric(
-        name="Consistency",
-        fn=consistency_fn,
-        requires=["ACTUAL_OUTPUT", "REFERENCE"]
-    )
+from rouge_score import rouge_scorer
+import bert_score
+import textstat
 
-def get_repetitiveness_metric():
-    repetitiveness_metric = GEval(
-        name="Repetitiveness",
-        criteria="""I do not want my summary to contain unnecessary repetitive information.
-        Return 1 if the summary does not contain unnecessarily repetitive information, and 0 if the summary contains unnecessary repetitive information.
-        facts or main points that are repeated more than once. Points on the same topic, but talking about different aspects, are OK. In your reasoning, point out any unnecessarily repetitive points.""",
-        evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-        verbose_mode=True
-    )
-    return repetitiveness_metric
+def classic_metric(reference_summary: str, generated_summary: str):
+    # ROUGE
+    scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+    rouge_scores = scorer.score(reference_summary, generated_summary)
+    rouge_dict = {k: {"precision": v.precision, "recall": v.recall, "fmeasure": v.fmeasure} for k, v in rouge_scores.items()}
 
-def compute_coherence_score(sentences):
-    embedding_model = OpenAIEmbeddings(model="text-embedding-3-small")
-    sentences_embeddings = embedding_model.embed_documents(sentences)
-    sentence_similarities = []
-    for i in range(len(sentences_embeddings) - 2):
-    # Convert embeddings to numpy arrays and reshape to 2D
-    emb1 = np.array(sentences_embeddings[i])
-    emb2 = np.array(sentences_embeddings[i+2])
-    # Calculate cosine distance
-    distance = cosine(emb1, emb2)
-    similarity = 1 - distance
-    sentence_similarities.append(similarity)
-    coherence_score = np.mean(sentence_similarities)
-    return coherence_score
+    # BERTScore
+    P, R, F1 = bert_score.score([generated_summary], [reference_summary], lang="it", model_type="bert-base-multilingual-cased")
+    bert_dict = {"precision": float(P.mean()), "recall": float(R.mean()), "f1": float(F1.mean())}
 
-def get_vagueness_metric(llm):
-    def judge_vague(sentences: List[str], j=None) -> float:
-        prompt = (
-            "Sei un valutatore. Ti do una lista di frasi, valuta per ciascuna se è vaga.\n"
-            "Le frasi vaghe non esplicitano punti chiave.\n"
-            "Rispondi con JSON: [{\"sentence\": ..., \"is_vague\": true/false, \"reason\": …}, …]"
-        )
-        response = llm.invoke({"role": "user", "content": prompt + "\n\n" + "\n".join(sentences)})
-        data = json.loads(response)
-        vague_count = sum(1 for x in data["sentences"] if x["is_vague"])
-        return 1.0 - (vague_count / len(sentences))
+    # Leggibilità
+    readability_score = textstat.flesch_reading_ease(generated_summary)
 
-    return CustomMetric(name="Vagueness", fn=judge_vague, requires=["ACTUAL_OUTPUT"])
+    # Restituisci tutto in un dizionario
+    return {
+        "rouge": rouge_dict,
+        "bertscore": bert_dict,
+        "readability": readability_score
+    }
 
-
-import nltk
-import spacy
-nlp = spacy.load("en_core_web_sm")
-
-def get_entity_density(text):
-    summary_tokens = nltk.word_tokenize(text)
-    num_tokens = len(summary_tokens)
-    doc = nlp(text)
-    num_entities = len(doc.ents)
-    entity_density = num_entities / num_tokens
-    return entity_density
-
-
-def aggregate_results(result: Dict[str, float], weights: Dict[str, float]) -> float:
-    total = 0.0
-    w_sum = 0.0
-    for metric_name, score in result.items():
-        w = weights.get(metric_name, 1.0)
-        total += w * score
-        w_sum += w
-    return total / w_sum if w_sum > 0 else 0.0
+# Esempio d'uso
+reference = "The cat sat on the mat."
+generated = "The cat is on the mat."
+metrics = classic_metric(reference, generated)
+print(metrics)

@@ -32,8 +32,8 @@ from deepeval.metrics import (
 
 CONFIGS = [
     {"summary": None, "toon_format": False},
-    {"summary": None, "toon_format": True},
-    #{"summary": True,  "toon_format": False},
+    {"summary": True, "toon_format": False},
+    #{"summary": None, "toon_format": True},
     #{"summary": True, "toon_format": True},
 ]
 
@@ -109,6 +109,7 @@ def evaluate_qa_tool(dataset, qa_chain):
     deepeval_results = []
     custom_metric_results = []
     results = []
+    qa_tool = QATool()
 
     ollama_model = DeepSeekModel(model="deepseek-chat", api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -125,7 +126,7 @@ def evaluate_qa_tool(dataset, qa_chain):
 
             processed_query = {
                 "user_query": test_case_data["query"],
-                "summary": test_case_data.get("summary")
+                "summary": test_case_data.get("summary") if config["summary"] else "",
             }
 
             language_hint = detect_language_from_query(test_case_data["query"])
@@ -146,7 +147,7 @@ def evaluate_qa_tool(dataset, qa_chain):
             )
 
             llm_test_case = LLMTestCase(
-                input=processed_query["user_query"] + "\nSummary:" + (processed_query["summary"] or ""),
+                input=processed_query["user_query"] + "\nSummary:" + (processed_query["summary"]),
                 actual_output=output["ai_response"],
                 retrieval_context=[doc.page_content for doc in output.get("docs_source", [])],
                 expected_output=test_case_data["expected_answer"]
@@ -165,8 +166,7 @@ def evaluate_qa_tool(dataset, qa_chain):
 
     return results
 
-if __name__ == "__main__":
-
+def start_qa_evaluation():
     dataset = TEST_CASES
     qa_chain = None
 
@@ -181,7 +181,7 @@ if __name__ == "__main__":
         logger.error("qa_chain non pronta.", exc_info=True)
         exit(1)
 
-    qa_tool = QATool()
+
     logger.info("Inizio valutazione su test set...\n")
 
     results = evaluate_qa_tool(dataset, qa_chain)
